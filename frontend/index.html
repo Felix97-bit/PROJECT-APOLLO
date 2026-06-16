@@ -22,7 +22,17 @@
     <!-- ============ CENTERPIECE: the golden compass ============ -->
     <section class="center" aria-label="Apollo">
       <div class="compass-wrap">
-        <!-- The pulsing halo (glows when Apollo speaks) sits behind the compass -->
+        <!-- Speaking-state "living energy": an orbiting energy ring + drifting
+             light wisps. All sit BEHIND the compass and only animate when the
+             .speaking class is on .compass-wrap (driven by the TTS events). -->
+        <div class="glow-layers" aria-hidden="true">
+          <div class="energy-ring"></div>
+          <div class="wisp wisp-1"></div>
+          <div class="wisp wisp-2"></div>
+          <div class="wisp wisp-3"></div>
+        </div>
+
+        <!-- The core halo (glows when Apollo speaks) sits behind the compass -->
         <div class="halo" id="halo" aria-hidden="true"></div>
 
         <!-- Original ornate nautical compass, built as a scalable SVG.

@@ -22,6 +22,20 @@
   /* Surfaces */
   --surface:        rgba(255, 255, 255, 0.72);
   --surface-border: rgba(212, 175, 55, 0.28);
+
+  /* =========================================================================
+     SPEAKING GLOW — "living golden energy"  (TUNE THESE to dial in the feel)
+     ========================================================================= */
+  --glow-color:          #FFD75E;  /* the gold of the energy (try #FFC93C warmer, #FFE89B paler) */
+  --glow-intensity:      0.95;     /* overall brightness of the glow, 0–1 (higher = stronger)      */
+  --glow-spread:         34px;     /* softness/blur of halo + wisps (higher = bigger, softer bloom)*/
+  --glow-rotation-speed: 5s;       /* time for the energy ring to orbit once (LOWER = faster sweep)*/
+  --glow-pulse-rate:     1.2s;     /* core halo breathing speed (LOWER = faster pulsing)           */
+  --wisp-opacity:        0.5;      /* brightness of the drifting light wisps, 0–1                  */
+  --wisp-drift-speed:    7s;       /* base time for a wisp to float its loop (LOWER = faster)      */
+  --shimmer-rate:        2s;       /* how fast the compass linework brightens/dims                 */
+  --shimmer-amount:      0.18;     /* how much the compass brightens at the peak (0 = no shimmer)  */
+  /* NOTE: the NUMBER of wisps = the number of .wisp divs in index.html (currently 3). */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -104,6 +118,63 @@ body {
   pointer-events: none;
 }
 
+/* ---- Speaking-state energy layers (sit BEHIND the compass) ---- */
+.glow-layers {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  z-index: 0;                      /* behind the halo (1) and the compass (2) */
+  opacity: 0;                      /* idle: hidden */
+  transition: opacity 0.4s ease;   /* graceful fade-OUT when speaking ends */
+  pointer-events: none;
+}
+
+/* The orbiting "comet tail" of light that sweeps around the compass rim */
+.energy-ring {
+  position: absolute;
+  width: 150%;
+  height: 150%;
+  border-radius: 50%;
+  background: conic-gradient(from 0deg,
+    transparent 0deg,
+    transparent 210deg,
+    color-mix(in srgb, var(--glow-color) 70%, transparent) 320deg,
+    var(--glow-color) 350deg,
+    transparent 360deg);
+  /* carve it into a ring band so it reads as light TRAVELLING around the edge */
+  -webkit-mask: radial-gradient(closest-side, transparent 58%, #000 66%, #000 84%, transparent 92%);
+          mask: radial-gradient(closest-side, transparent 58%, #000 66%, #000 84%, transparent 92%);
+  filter: blur(6px);
+  opacity: 0;                      /* revealed only when motion is allowed (below) */
+  will-change: transform;
+}
+
+/* Soft, heavily-blurred light blobs — ambient swirling energy */
+.wisp {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--glow-color) 75%, transparent) 0%,
+    transparent 70%);
+  filter: blur(var(--glow-spread));
+  opacity: 0;
+  mix-blend-mode: screen;          /* adds light, for a glowy feel */
+  will-change: transform, opacity;
+}
+
+/* The ring + wisps only appear when motion is allowed. Under reduced motion the
+   speaking state keeps just the calm halo pulse. The PARENT .glow-layers opacity
+   does the actual show/hide + graceful fade, so children keep their opacity while
+   the whole group fades out. */
+@media (prefers-reduced-motion: no-preference) {
+  .energy-ring { opacity: calc(var(--glow-intensity) * 0.9); }
+  .wisp-1, .wisp-2 { opacity: var(--wisp-opacity); }
+  .wisp-3 { opacity: calc(var(--wisp-opacity) * 0.85); }
+}
+
 /* ---- Wordmark + status ---- */
 .wordmark {
   font-family: "Cinzel", serif;
@@ -143,65 +214,117 @@ body {
 }
 
 /* ===========================================================================
-   SPEAKING state — strong pulsing halo + rotation + brightening
-   Added/removed via the .speaking class on the .compass-wrap by app.js,
-   tied to the actual speech start/end events.
+   SPEAKING state — "living golden energy"
+   Added/removed via the .speaking class on .compass-wrap by app.js, tied to the
+   real speech start/end events. Several layers run together so it reads as
+   FLOWING energy, not a single static glow:
+     1. core halo   — breathes in intensity + scale
+     2. energy ring — a comet tail of light orbiting the rim
+     3. wisps       — soft blurred blobs drifting on looping arcs
+     4. shimmer     — the compass linework itself brightens/dims
+   Everything animates only via transform / opacity / filter (GPU-friendly).
+   Tune it all with the --glow-* / --wisp-* / --shimmer-* variables in :root.
    =========================================================================== */
-.compass-wrap.speaking .compass {
-  filter: drop-shadow(0 0 26px var(--gold-glow))
-          drop-shadow(0 4px 18px rgba(156, 122, 30, 0.25));
-  animation: speak-brighten 1.2s ease-in-out infinite;
+
+/* Reveal the energy group (fast fade-IN; .glow-layers handles the graceful OUT) */
+.compass-wrap.speaking .glow-layers {
+  opacity: 1;
+  transition: opacity 0.12s ease;
 }
 
+/* 1. Core halo — visible */
 .compass-wrap.speaking .halo {
-  opacity: 0.9;
+  opacity: var(--glow-intensity);
+}
+
+/* 4. Shimmer — base elevated glow on the compass (also the reduced-motion look) */
+.compass-wrap.speaking .compass {
+  filter: drop-shadow(0 0 calc(var(--glow-spread) * 0.7) var(--glow-color))
+          drop-shadow(0 4px 18px rgba(156, 122, 30, 0.25));
 }
 
 @media (prefers-reduced-motion: no-preference) {
+  /* 1. Core halo breathes on its own rhythm */
   .compass-wrap.speaking .halo {
-    animation: halo-pulse 1.2s ease-in-out infinite;
+    animation: core-pulse var(--glow-pulse-rate) ease-in-out infinite;
   }
-  /* The rose rotates slowly & continuously while speaking */
+  /* 2. Energy ring orbits the rim — the "stream of energy" sweeping around */
+  .compass-wrap.speaking .energy-ring {
+    animation: energy-orbit var(--glow-rotation-speed) linear infinite;
+  }
+  /* 3. Wisps drift on different paths + speeds so the energy swirls */
+  .compass-wrap.speaking .wisp-1 { animation: wisp-drift-1 var(--wisp-drift-speed) ease-in-out infinite; }
+  .compass-wrap.speaking .wisp-2 { animation: wisp-drift-2 calc(var(--wisp-drift-speed) * 1.45) ease-in-out infinite; }
+  .compass-wrap.speaking .wisp-3 { animation: wisp-drift-3 calc(var(--wisp-drift-speed) * 0.8) ease-in-out infinite; }
+  /* 4. The compass linework shimmers — an energized instrument */
+  .compass-wrap.speaking .compass {
+    animation: compass-shimmer var(--shimmer-rate) ease-in-out infinite;
+  }
+  /* Existing motion kept: the rose slowly rotates and the jewel pulses */
   .compass-wrap.speaking #rose {
     transform-origin: 200px 200px;
     animation: rose-spin 16s linear infinite;
   }
-  /* The center jewel pulses brightest */
   .compass-wrap.speaking #jewel {
     transform-origin: 200px 200px;
-    animation: jewel-pulse 1.2s ease-in-out infinite;
+    animation: jewel-pulse var(--glow-pulse-rate) ease-in-out infinite;
   }
 
-  @keyframes halo-pulse {
-    0%, 100% { opacity: 0.55; transform: scale(0.9); }
-    50%      { opacity: 1.0;  transform: scale(1.06); }
+  @keyframes core-pulse {
+    0%, 100% { opacity: calc(var(--glow-intensity) * 0.6); transform: scale(0.9); }
+    50%      { opacity: var(--glow-intensity);             transform: scale(1.08); }
+  }
+  @keyframes energy-orbit {
+    to { transform: rotate(360deg); }
+  }
+  @keyframes compass-shimmer {
+    0%, 100% { filter: drop-shadow(0 0 calc(var(--glow-spread) * 0.5) var(--glow-color))
+                       drop-shadow(0 4px 18px rgba(156,122,30,0.25)) brightness(1); }
+    50%      { filter: drop-shadow(0 0 calc(var(--glow-spread) * 1.0) var(--glow-color))
+                       drop-shadow(0 4px 18px rgba(156,122,30,0.25)) brightness(calc(1 + var(--shimmer-amount))); }
   }
   @keyframes rose-spin {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
   @keyframes jewel-pulse {
-    0%, 100% { filter: drop-shadow(0 0 2px var(--gold-glow)); }
-    50%      { filter: drop-shadow(0 0 10px var(--gold-glow)); }
+    0%, 100% { filter: drop-shadow(0 0 2px var(--glow-color)); }
+    50%      { filter: drop-shadow(0 0 10px var(--glow-color)); }
+  }
+
+  /* Gentle looping drift arcs for the wisps (transform-only = smooth) */
+  @keyframes wisp-drift-1 {
+    0%   { transform: translate(-120px, -50px) scale(0.9); }
+    33%  { transform: translate(70px, -120px) scale(1.15); }
+    66%  { transform: translate(130px, 60px) scale(1.0); }
+    100% { transform: translate(-120px, -50px) scale(0.9); }
+  }
+  @keyframes wisp-drift-2 {
+    0%   { transform: translate(110px, -70px) scale(1.0); }
+    33%  { transform: translate(-60px, 110px) scale(0.85); }
+    66%  { transform: translate(-130px, -40px) scale(1.1); }
+    100% { transform: translate(110px, -70px) scale(1.0); }
+  }
+  @keyframes wisp-drift-3 {
+    0%   { transform: translate(0px, 120px) scale(0.95); }
+    33%  { transform: translate(120px, -20px) scale(1.1); }
+    66%  { transform: translate(-110px, 40px) scale(0.9); }
+    100% { transform: translate(0px, 120px) scale(0.95); }
   }
 }
 
-@keyframes speak-brighten {
-  0%, 100% { filter: drop-shadow(0 0 18px var(--gold-glow)) drop-shadow(0 4px 18px rgba(156,122,30,0.25)); }
-  50%      { filter: drop-shadow(0 0 34px var(--gold-glow)) drop-shadow(0 4px 18px rgba(156,122,30,0.25)); }
-}
-
-/* A single brief glow pulse for when Apollo replies while muted */
+/* Muted reply: one brief, gentle pulse — a soft version of the core pulse so it
+   feels consistent with the speaking glow (no full energy ring / wisps). */
 .compass-wrap.pulse-once .halo { animation: pulse-once 1.5s ease-out 1; }
 .compass-wrap.pulse-once .compass { animation: brighten-once 1.5s ease-out 1; }
 @keyframes pulse-once {
   0%   { opacity: 0.18; transform: scale(0.85); }
-  30%  { opacity: 0.85; transform: scale(1.04); }
+  30%  { opacity: calc(var(--glow-intensity) * 0.85); transform: scale(1.05); }
   100% { opacity: 0.18; transform: scale(0.85); }
 }
 @keyframes brighten-once {
   0%   { filter: drop-shadow(0 4px 18px rgba(156,122,30,0.18)); }
-  30%  { filter: drop-shadow(0 0 26px var(--gold-glow)) drop-shadow(0 4px 18px rgba(156,122,30,0.22)); }
+  30%  { filter: drop-shadow(0 0 calc(var(--glow-spread) * 0.8) var(--glow-color)) drop-shadow(0 4px 18px rgba(156,122,30,0.22)); }
   100% { filter: drop-shadow(0 4px 18px rgba(156,122,30,0.18)); }
 }
 
