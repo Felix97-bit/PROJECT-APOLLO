@@ -221,7 +221,10 @@ body {
   top: 24px;
   left: 24px;
   width: 360px;
-  max-height: calc(100vh - 48px);
+  /* Cap the panel so its bottom never passes the screen's vertical middle.
+     It starts 24px from the top, so 50vh - 24px ends it exactly at halfway.
+     The message list inside scrolls when there are more messages than fit. */
+  max-height: calc(50vh - 24px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
