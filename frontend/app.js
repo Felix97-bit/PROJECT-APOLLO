@@ -54,12 +54,15 @@ function pulseOnce() {
 function addMessage(role, text) {
   const wrap = document.createElement("div");
   wrap.className = `msg ${role}`;
-  const who = document.createElement("span");
-  who.className = "who";
-  who.textContent = role === "assistant" ? "Apollo" : "You";
+  // Apollo's messages get a name label; the user's show just their message.
+  if (role === "assistant") {
+    const who = document.createElement("span");
+    who.className = "who";
+    who.textContent = "Apollo";
+    wrap.appendChild(who);
+  }
   const body = document.createElement("span");
   body.textContent = text;
-  wrap.appendChild(who);
   wrap.appendChild(body);
   els.messages.appendChild(wrap);
   els.messages.scrollTop = els.messages.scrollHeight;
