@@ -91,8 +91,48 @@ def _open_window():
         print("[Apollo] Tip: Chrome or Edge gives the nicer standalone-window look.")
 
 
+def _free_port(port):
+    """Stop any previous Apollo server still holding our port.
+
+    Closing the app window does NOT stop the background server. Without this, a
+    relaunch would silently fail to start (port already in use) and reconnect to
+    the OLD server — which wouldn't have picked up any recent .env changes. So on
+    every launch we clear the port first, guaranteeing a fresh start. We only kill
+    a *python* process (our own server), never anything else."""
+    try:
+        out = subprocess.check_output(
+            ["netstat", "-ano", "-p", "TCP"], text=True, stderr=subprocess.DEVNULL
+        )
+    except Exception:
+        return
+    pids = set()
+    for line in out.splitlines():
+        parts = line.split()
+        # Format: TCP  LocalAddr  ForeignAddr  STATE  PID
+        if len(parts) >= 5 and parts[0] == "TCP" and parts[3].upper() == "LISTENING":
+            if parts[1].rsplit(":", 1)[-1] == str(port):
+                pid = parts[4]
+                if pid.isdigit() and pid != "0":
+                    pids.add(pid)
+    for pid in pids:
+        try:
+            info = subprocess.check_output(
+                ["tasklist", "/FI", f"PID eq {pid}", "/FO", "CSV", "/NH"],
+                text=True, stderr=subprocess.DEVNULL,
+            )
+            if "python" in info.lower():
+                subprocess.run(["taskkill", "/F", "/PID", pid],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f"[Apollo] Stopped a previous Apollo server (PID {pid}).")
+        except Exception:
+            pass
+    if pids:
+        time.sleep(1)  # give Windows a moment to release the port
+
+
 def main():
     memory.init_db()
+    _free_port(config.PORT)
     print("Apollo is starting…")
     print(f"  Local address: {URL}")
     # Open the window on a background thread once the server is ready.
