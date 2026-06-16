@@ -28,7 +28,9 @@ const els = {
 // ===========================================================================
 // STATUS + COMPASS STATE
 // ===========================================================================
-function setStatus(text) { els.status.textContent = text; }
+// The status line was removed from the UI; keep this null-safe so the voice/mic
+// code that still calls it does nothing instead of erroring.
+function setStatus(text) { if (els.status) els.status.textContent = text; }
 
 function startSpeakingGlow() {
   els.compassWrap.classList.remove("pulse-once", "listening");
@@ -263,7 +265,7 @@ function stopListening() {
   isListening = false;
   els.micBtn.classList.remove("active");
   els.compassWrap.classList.remove("listening");
-  if (els.status.textContent === "Listening…") setStatus("Ready");
+  if (!els.status || els.status.textContent === "Listening…") setStatus("Ready");
 }
 
 function toggleMic() {
