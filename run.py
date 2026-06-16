@@ -11,11 +11,22 @@ You normally don't run this directly — just double-click run.bat.
 """
 
 import os
+import sys
 import shutil
 import subprocess
 import threading
 import time
 import urllib.request
+
+# IMPORTANT: when launched via pythonw.exe (the no-console launcher the desktop
+# shortcut uses), sys.stdout and sys.stderr are None. Any print() or log write
+# then raises an error and the app dies SILENTLY — nothing opens. So redirect
+# output to a log file. This is what makes double-clicking the shortcut work.
+if sys.stdout is None or sys.stderr is None:
+    _log_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "apollo_launch.log")
+    _log_file = open(_log_path, "a", encoding="utf-8", buffering=1)
+    sys.stdout = _log_file
+    sys.stderr = _log_file
 
 import uvicorn
 

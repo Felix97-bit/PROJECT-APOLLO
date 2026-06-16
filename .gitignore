@@ -12,3 +12,6 @@ venv/
 # Python cache files
 __pycache__/
 *.pyc
+
+# Launcher log (created when run via the no-console shortcut)
+*.log
