@@ -24,18 +24,21 @@
   --surface-border: rgba(212, 175, 55, 0.28);
 
   /* =========================================================================
-     SPEAKING GLOW — "living golden energy"  (TUNE THESE to dial in the feel)
+     SPEAKING GLOW — layered, evenly-distributed golden energy (TUNE THESE)
+     Colour is LAYERED for luminosity — deep gold near the compass, bright gold
+     through the body, warm-white at the brightest points. (Not flat yellow.)
      ========================================================================= */
-  --glow-color:          #FFD75E;  /* the gold of the energy (try #FFC93C warmer, #FFE89B paler) */
-  --glow-intensity:      0.95;     /* overall brightness of the glow, 0–1 (higher = stronger)      */
-  --glow-spread:         34px;     /* softness/blur of halo + wisps (higher = bigger, softer bloom)*/
-  --glow-rotation-speed: 5s;       /* time for the energy ring to orbit once (LOWER = faster sweep)*/
-  --glow-pulse-rate:     1.2s;     /* core halo breathing speed (LOWER = faster pulsing)           */
-  --wisp-opacity:        0.5;      /* brightness of the drifting light wisps, 0–1                  */
-  --wisp-drift-speed:    7s;       /* base time for a wisp to float its loop (LOWER = faster)      */
-  --shimmer-rate:        2s;       /* how fast the compass linework brightens/dims                 */
-  --shimmer-amount:      0.18;     /* how much the compass brightens at the peak (0 = no shimmer)  */
-  /* NOTE: the NUMBER of wisps = the number of .wisp divs in index.html (currently 3). */
+  --g-deep:         #C9A227;  /* deep gold — sits nearest the compass         */
+  --g-bright:       #FFD75E;  /* bright gold — the body of the mid-glow        */
+  --g-white:        #FFF4D6;  /* warm-white — the brightest highlight points   */
+  --glow-intensity: 0.95;     /* overall brightness of the glow, 0–1           */
+  --glow-blur:      40px;     /* wisp blur (30–50px = reads as ambient light)  */
+  --halo-pulse:     1.4s;     /* base-halo breathing speed (LOWER = faster)    */
+  --sweep-speed:    6s;       /* conic sweep orbit time (LOWER = faster)       */
+  --flicker-speed:  4.5s;     /* irregular intensity flicker rhythm            */
+  /* Wisp orbit speeds are deliberately non-synced (5.3/7.1/9.7/6.2/8.9s) in the
+     .orbit-N rules below, so the bright spots never line up and the pattern
+     never visibly repeats. NUMBER of wisps = number of .orbit divs in index.html. */
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -118,62 +121,101 @@ body {
   pointer-events: none;
 }
 
-/* ---- Speaking-state energy layers (sit BEHIND the compass) ---- */
+/* ---- Speaking-state energy layers — a container centered EXACTLY on the
+   compass, sitting behind it. Centering via top/left 50% + translate(-50%,-50%)
+   is what fixes the old off-center pooling. ---- */
 .glow-layers {
   position: absolute;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  z-index: 0;                      /* behind the halo (1) and the compass (2) */
-  opacity: 0;                      /* idle: hidden */
-  transition: opacity 0.4s ease;   /* graceful fade-OUT when speaking ends */
+  top: 50%;
+  left: 50%;
+  width: 400px;
+  height: 400px;
+  transform: translate(-50%, -50%);   /* perfectly centered on the compass */
+  z-index: 0;                          /* behind the halo (1) and the compass (2) */
+  opacity: 0;                          /* idle: hidden */
+  transition: opacity 0.4s ease;       /* graceful fade-OUT when speaking ends */
   pointer-events: none;
 }
 
-/* The orbiting "comet tail" of light that sweeps around the compass rim */
-.energy-ring {
+/* Wraps all the layers so their overall intensity can flicker together */
+.glow-inner {
   position: absolute;
-  width: 150%;
-  height: 150%;
+  inset: 0;
+}
+
+/* 1. Base halo — an even ring of light centered behind the compass, colour
+   layered deep-gold -> bright-gold -> warm-white -> transparent for luminosity */
+.halo-base {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 540px;
+  height: 540px;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background: radial-gradient(circle,
+    transparent 54%,
+    color-mix(in srgb, var(--g-deep) 42%, transparent) 66%,
+    color-mix(in srgb, var(--g-bright) 55%, transparent) 76%,
+    color-mix(in srgb, var(--g-white) 48%, transparent) 84%,
+    color-mix(in srgb, var(--g-bright) 22%, transparent) 92%,
+    transparent 100%);
+  filter: blur(8px);
+  opacity: var(--glow-intensity);
+}
+
+/* 3. Rotating conic sweep — a faint beam travelling around the rim */
+.sweep {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 560px;
+  height: 560px;
+  transform: translate(-50%, -50%);
   border-radius: 50%;
   background: conic-gradient(from 0deg,
     transparent 0deg,
-    transparent 210deg,
-    color-mix(in srgb, var(--glow-color) 70%, transparent) 320deg,
-    var(--glow-color) 350deg,
+    color-mix(in srgb, var(--g-white) 32%, transparent) 38deg,
+    color-mix(in srgb, var(--g-bright) 28%, transparent) 72deg,
+    transparent 150deg,
     transparent 360deg);
-  /* carve it into a ring band so it reads as light TRAVELLING around the edge */
-  -webkit-mask: radial-gradient(closest-side, transparent 58%, #000 66%, #000 84%, transparent 92%);
-          mask: radial-gradient(closest-side, transparent 58%, #000 66%, #000 84%, transparent 92%);
-  filter: blur(6px);
-  opacity: 0;                      /* revealed only when motion is allowed (below) */
+  /* carve to a ring band so the beam reads as travelling the rim */
+  -webkit-mask: radial-gradient(closest-side, transparent 60%, #000 72%, #000 94%, transparent 100%);
+          mask: radial-gradient(closest-side, transparent 60%, #000 72%, #000 94%, transparent 100%);
+  filter: blur(12px);
+  opacity: calc(var(--glow-intensity) * 0.5);
+}
+
+/* 2. Orbiting wisps. Each .orbit is a centered pivot; its .blob is pushed
+   outward, so when the orbit rotates the blob sweeps a circle AROUND the
+   compass. Heavy blur makes each read as ambient light, not a shape. */
+.orbit {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+}
+.orbit .blob {
+  position: absolute;
+  border-radius: 50%;
+  /* center on the pivot, then push outward by the orbit radius */
+  transform: translate(-50%, -50%) translateY(calc(-1 * var(--orbit-r, 170px)));
+  background: radial-gradient(circle,
+    color-mix(in srgb, var(--g-white) 82%, transparent) 0%,
+    color-mix(in srgb, var(--g-bright) 55%, transparent) 36%,
+    color-mix(in srgb, var(--g-deep) 22%, transparent) 58%,
+    transparent 74%);
+  filter: blur(var(--glow-blur));
+  opacity: var(--blob-opacity, 0.5);
   will-change: transform;
 }
-
-/* Soft, heavily-blurred light blobs — ambient swirling energy */
-.wisp {
-  position: absolute;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: radial-gradient(circle,
-    color-mix(in srgb, var(--glow-color) 75%, transparent) 0%,
-    transparent 70%);
-  filter: blur(var(--glow-spread));
-  opacity: 0;
-  mix-blend-mode: screen;          /* adds light, for a glowy feel */
-  will-change: transform, opacity;
-}
-
-/* The ring + wisps only appear when motion is allowed. Under reduced motion the
-   speaking state keeps just the calm halo pulse. The PARENT .glow-layers opacity
-   does the actual show/hide + graceful fade, so children keep their opacity while
-   the whole group fades out. */
-@media (prefers-reduced-motion: no-preference) {
-  .energy-ring { opacity: calc(var(--glow-intensity) * 0.9); }
-  .wisp-1, .wisp-2 { opacity: var(--wisp-opacity); }
-  .wisp-3 { opacity: calc(var(--wisp-opacity) * 0.85); }
-}
+/* Per-wisp variety — orbit radius, size and opacity all differ slightly */
+.orbit-1 .blob { --orbit-r: 168px; width: 220px; height: 220px; --blob-opacity: 0.55; }
+.orbit-2 .blob { --orbit-r: 188px; width: 180px; height: 180px; --blob-opacity: 0.42; }
+.orbit-3 .blob { --orbit-r: 150px; width: 250px; height: 250px; --blob-opacity: 0.50; }
+.orbit-4 .blob { --orbit-r: 198px; width: 200px; height: 200px; --blob-opacity: 0.38; }
+.orbit-5 .blob { --orbit-r: 174px; width: 234px; height: 234px; --blob-opacity: 0.48; }
 
 /* ---- Wordmark + status ---- */
 .wordmark {
@@ -214,107 +256,95 @@ body {
 }
 
 /* ===========================================================================
-   SPEAKING state — "living golden energy"
-   Added/removed via the .speaking class on .compass-wrap by app.js, tied to the
-   real speech start/end events. Several layers run together so it reads as
-   FLOWING energy, not a single static glow:
-     1. core halo   — breathes in intensity + scale
-     2. energy ring — a comet tail of light orbiting the rim
-     3. wisps       — soft blurred blobs drifting on looping arcs
-     4. shimmer     — the compass linework itself brightens/dims
-   Everything animates only via transform / opacity / filter (GPU-friendly).
-   Tune it all with the --glow-* / --wisp-* / --shimmer-* variables in :root.
+   SPEAKING state — layered "living golden energy", spread EVENLY around the compass
+   Added/removed via the .speaking class on .compass-wrap by app.js (TTS events).
+   All layers are centered behind the compass; everything animates only via
+   transform / opacity / filter (GPU-friendly):
+     1. base halo — even ring of light, gently breathing
+     2. wisps     — 5 blobs ORBITING at non-synced speeds (even, never repeats)
+     3. sweep     — a faint conic beam rotating round the rim
+     4. flicker   — the whole glow's intensity breathes on an irregular rhythm
+   Tune with the --g-* / --glow-* / --halo-pulse / --sweep-speed vars in :root.
    =========================================================================== */
 
-/* Reveal the energy group (fast fade-IN; .glow-layers handles the graceful OUT) */
+/* Reveal the glow group (fast fade-IN; .glow-layers handles the graceful 0.4s OUT) */
 .compass-wrap.speaking .glow-layers {
   opacity: 1;
   transition: opacity 0.12s ease;
 }
 
-/* 1. Core halo — visible */
-.compass-wrap.speaking .halo {
-  opacity: var(--glow-intensity);
-}
-
-/* 4. Shimmer — base elevated glow on the compass (also the reduced-motion look) */
+/* The compass itself gets a soft, even gold glow while speaking (grounds it) */
 .compass-wrap.speaking .compass {
-  filter: drop-shadow(0 0 calc(var(--glow-spread) * 0.7) var(--glow-color))
+  filter: drop-shadow(0 0 26px color-mix(in srgb, var(--g-bright) 70%, transparent))
           drop-shadow(0 4px 18px rgba(156, 122, 30, 0.25));
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  /* 1. Core halo breathes on its own rhythm */
-  .compass-wrap.speaking .halo {
-    animation: core-pulse var(--glow-pulse-rate) ease-in-out infinite;
-  }
-  /* 2. Energy ring orbits the rim — the "stream of energy" sweeping around */
-  .compass-wrap.speaking .energy-ring {
-    animation: energy-orbit var(--glow-rotation-speed) linear infinite;
-  }
-  /* 3. Wisps drift on different paths + speeds so the energy swirls */
-  .compass-wrap.speaking .wisp-1 { animation: wisp-drift-1 var(--wisp-drift-speed) ease-in-out infinite; }
-  .compass-wrap.speaking .wisp-2 { animation: wisp-drift-2 calc(var(--wisp-drift-speed) * 1.45) ease-in-out infinite; }
-  .compass-wrap.speaking .wisp-3 { animation: wisp-drift-3 calc(var(--wisp-drift-speed) * 0.8) ease-in-out infinite; }
-  /* 4. The compass linework shimmers — an energized instrument */
-  .compass-wrap.speaking .compass {
-    animation: compass-shimmer var(--shimmer-rate) ease-in-out infinite;
-  }
-  /* Existing motion kept: the rose slowly rotates and the jewel pulses */
+  /* 4. Overall intensity flicker — alive, not mechanically uniform */
+  .compass-wrap.speaking .glow-inner { animation: glow-flicker var(--flicker-speed) ease-in-out infinite; }
+  /* 1. Base halo breathes in scale + opacity */
+  .compass-wrap.speaking .halo-base { animation: halo-breathe var(--halo-pulse) ease-in-out infinite; }
+  /* 3. Conic sweep travels around the rim */
+  .compass-wrap.speaking .sweep { animation: sweep-spin var(--sweep-speed) linear infinite; }
+  /* 2. Five wisps orbit at non-synced speeds + offset phases = even, never-repeating */
+  .compass-wrap.speaking .orbit-1 { animation: orbit-spin 5.3s linear infinite; }
+  .compass-wrap.speaking .orbit-2 { animation: orbit-spin 7.1s linear infinite; animation-delay: -2.1s; }
+  .compass-wrap.speaking .orbit-3 { animation: orbit-spin 9.7s linear infinite; animation-delay: -5.5s; }
+  .compass-wrap.speaking .orbit-4 { animation: orbit-spin 6.2s linear infinite; animation-delay: -1.3s; }
+  .compass-wrap.speaking .orbit-5 { animation: orbit-spin 8.9s linear infinite; animation-delay: -4.0s; }
+  /* Existing compass motion kept: the rose rotates, the jewel pulses */
   .compass-wrap.speaking #rose {
     transform-origin: 200px 200px;
     animation: rose-spin 16s linear infinite;
   }
   .compass-wrap.speaking #jewel {
     transform-origin: 200px 200px;
-    animation: jewel-pulse var(--glow-pulse-rate) ease-in-out infinite;
+    animation: jewel-pulse var(--halo-pulse) ease-in-out infinite;
   }
 
-  @keyframes core-pulse {
-    0%, 100% { opacity: calc(var(--glow-intensity) * 0.6); transform: scale(0.9); }
-    50%      { opacity: var(--glow-intensity);             transform: scale(1.08); }
+  @keyframes glow-flicker {
+    0%   { opacity: 0.92; }
+    15%  { opacity: 1.0;  }
+    32%  { opacity: 0.85; }
+    48%  { opacity: 0.98; }
+    63%  { opacity: 0.88; }
+    80%  { opacity: 1.0;  }
+    100% { opacity: 0.92; }
   }
-  @keyframes energy-orbit {
-    to { transform: rotate(360deg); }
+  @keyframes halo-breathe {
+    0%, 100% { transform: translate(-50%, -50%) scale(0.95); opacity: calc(var(--glow-intensity) * 0.78); }
+    50%      { transform: translate(-50%, -50%) scale(1.05); opacity: var(--glow-intensity); }
   }
-  @keyframes compass-shimmer {
-    0%, 100% { filter: drop-shadow(0 0 calc(var(--glow-spread) * 0.5) var(--glow-color))
-                       drop-shadow(0 4px 18px rgba(156,122,30,0.25)) brightness(1); }
-    50%      { filter: drop-shadow(0 0 calc(var(--glow-spread) * 1.0) var(--glow-color))
-                       drop-shadow(0 4px 18px rgba(156,122,30,0.25)) brightness(calc(1 + var(--shimmer-amount))); }
+  @keyframes sweep-spin {
+    from { transform: translate(-50%, -50%) rotate(0deg); }
+    to   { transform: translate(-50%, -50%) rotate(360deg); }
+  }
+  @keyframes orbit-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
   }
   @keyframes rose-spin {
     from { transform: rotate(0deg); }
     to   { transform: rotate(360deg); }
   }
   @keyframes jewel-pulse {
-    0%, 100% { filter: drop-shadow(0 0 2px var(--glow-color)); }
-    50%      { filter: drop-shadow(0 0 10px var(--glow-color)); }
-  }
-
-  /* Gentle looping drift arcs for the wisps (transform-only = smooth) */
-  @keyframes wisp-drift-1 {
-    0%   { transform: translate(-120px, -50px) scale(0.9); }
-    33%  { transform: translate(70px, -120px) scale(1.15); }
-    66%  { transform: translate(130px, 60px) scale(1.0); }
-    100% { transform: translate(-120px, -50px) scale(0.9); }
-  }
-  @keyframes wisp-drift-2 {
-    0%   { transform: translate(110px, -70px) scale(1.0); }
-    33%  { transform: translate(-60px, 110px) scale(0.85); }
-    66%  { transform: translate(-130px, -40px) scale(1.1); }
-    100% { transform: translate(110px, -70px) scale(1.0); }
-  }
-  @keyframes wisp-drift-3 {
-    0%   { transform: translate(0px, 120px) scale(0.95); }
-    33%  { transform: translate(120px, -20px) scale(1.1); }
-    66%  { transform: translate(-110px, 40px) scale(0.9); }
-    100% { transform: translate(0px, 120px) scale(0.95); }
+    0%, 100% { filter: drop-shadow(0 0 2px var(--g-bright)); }
+    50%      { filter: drop-shadow(0 0 10px var(--g-bright)); }
   }
 }
 
-/* Muted reply: one brief, gentle pulse — a soft version of the core pulse so it
-   feels consistent with the speaking glow (no full energy ring / wisps). */
+/* Reduced motion: drop all orbiting/sweeping; keep only a soft halo opacity pulse */
+@media (prefers-reduced-motion: reduce) {
+  .sweep, .orbit { display: none; }
+  .compass-wrap.speaking .halo-base { animation: halo-soft-pulse 1.8s ease-in-out infinite; }
+  @keyframes halo-soft-pulse {
+    0%, 100% { opacity: calc(var(--glow-intensity) * 0.6); }
+    50%      { opacity: var(--glow-intensity); }
+  }
+}
+
+/* Muted reply: one brief, gentle pulse on the ambient halo — consistent feel,
+   without the full energy layers. */
 .compass-wrap.pulse-once .halo { animation: pulse-once 1.5s ease-out 1; }
 .compass-wrap.pulse-once .compass { animation: brighten-once 1.5s ease-out 1; }
 @keyframes pulse-once {
@@ -324,7 +354,7 @@ body {
 }
 @keyframes brighten-once {
   0%   { filter: drop-shadow(0 4px 18px rgba(156,122,30,0.18)); }
-  30%  { filter: drop-shadow(0 0 calc(var(--glow-spread) * 0.8) var(--glow-color)) drop-shadow(0 4px 18px rgba(156,122,30,0.22)); }
+  30%  { filter: drop-shadow(0 0 26px color-mix(in srgb, var(--g-bright) 70%, transparent)) drop-shadow(0 4px 18px rgba(156,122,30,0.22)); }
   100% { filter: drop-shadow(0 4px 18px rgba(156,122,30,0.18)); }
 }
 

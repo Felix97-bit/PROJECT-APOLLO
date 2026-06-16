@@ -26,10 +26,18 @@
              light wisps. All sit BEHIND the compass and only animate when the
              .speaking class is on .compass-wrap (driven by the TTS events). -->
         <div class="glow-layers" aria-hidden="true">
-          <div class="energy-ring"></div>
-          <div class="wisp wisp-1"></div>
-          <div class="wisp wisp-2"></div>
-          <div class="wisp wisp-3"></div>
+          <!-- .glow-inner flickers the overall intensity; inside: an even base
+               halo, a rotating conic sweep, and 5 wisps that ORBIT the centre
+               at non-synced speeds for even, never-repeating energy. -->
+          <div class="glow-inner">
+            <div class="halo-base"></div>
+            <div class="sweep"></div>
+            <div class="orbit orbit-1"><span class="blob"></span></div>
+            <div class="orbit orbit-2"><span class="blob"></span></div>
+            <div class="orbit orbit-3"><span class="blob"></span></div>
+            <div class="orbit orbit-4"><span class="blob"></span></div>
+            <div class="orbit orbit-5"><span class="blob"></span></div>
+          </div>
         </div>
 
         <!-- The core halo (glows when Apollo speaks) sits behind the compass -->
