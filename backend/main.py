@@ -18,7 +18,7 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
 from fastapi import FastAPI  # noqa: E402  (imported after load_dotenv on purpose)
-from fastapi.responses import FileResponse  # noqa: E402
+from fastapi.responses import HTMLResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
@@ -96,10 +96,25 @@ def clear():
 
 
 # ---- Serve the frontend ------------------------------------------------------
+def _asset_version(filename):
+    """A version tag that changes whenever the file changes (its modified time).
+    Appended to the CSS/JS URLs so the browser always fetches the latest after an
+    edit, instead of reusing a stale cached copy."""
+    try:
+        return str(int(os.path.getmtime(os.path.join(_FRONTEND_DIR, filename))))
+    except OSError:
+        return "1"
+
+
 @app.get("/")
 def index():
-    """Serve the main Apollo page."""
-    return FileResponse(os.path.join(_FRONTEND_DIR, "index.html"))
+    """Serve the main Apollo page, stamping the CSS/JS links with a version tag
+    so edits always show up (defeats stale browser caching)."""
+    with open(os.path.join(_FRONTEND_DIR, "index.html"), "r", encoding="utf-8") as f:
+        html = f.read()
+    html = html.replace("/static/styles.css", f"/static/styles.css?v={_asset_version('styles.css')}")
+    html = html.replace("/static/app.js", f"/static/app.js?v={_asset_version('app.js')}")
+    return HTMLResponse(html)
 
 
 # Serve everything else in the frontend folder (styles.css, app.js, etc.) at /static.
