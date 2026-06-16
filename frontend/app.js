@@ -138,10 +138,29 @@ let preferredVoice = null;
 function pickVoice() {
   if (!ttsSupported) return;
   const voices = speechSynthesis.getVoices();
-  // Prefer a natural-sounding English voice if the system has one.
+  if (!voices.length) return;
+
+  // Apollo's voice: a clean, professional BRITISH MAN — natural and smooth, but
+  // still subtly synthetic. We prefer Microsoft's NATURAL/neural British male
+  // voices (e.g. "Microsoft Ryan - Natural", available in Edge) because they're
+  // far less robotic than Chrome's "Google UK English Male". Fallbacks always
+  // prefer a British accent, then any MALE voice over a female one.
+  const find = (re) => voices.find((v) => re.test(v.name));
+  const isGB = (v) =>
+    /en[-_]?GB/i.test(v.lang) || /United Kingdom|British|UK English/i.test(v.name);
+  const isNatural = (v) => /natural|neural|online/i.test(v.name);
+  const soundsMale = (v) =>
+    /\b(male|man)\b|George|Ryan|Oliver|Thomas|Daniel|David|Mark|Brian|Guy/i.test(v.name);
+
   preferredVoice =
-    voices.find((v) => /en[-_]?(US|GB)/i.test(v.lang) && /natural|google|zira|aria|jenny/i.test(v.name)) ||
-    voices.find((v) => /^en/i.test(v.lang)) ||
+    voices.find((v) => isGB(v) && soundsMale(v) && isNatural(v)) ||  // natural British male (Ryan) — least robotic
+    find(/Microsoft (Ryan|Thomas|Oliver|George)/i) ||               // UK males by name (Edge)
+    voices.find((v) => isGB(v) && soundsMale(v)) ||                  // any British male
+    find(/Google UK English Male/i) ||                              // Chrome's (more robotic) fallback
+    voices.find(isGB) ||                                             // any British voice
+    voices.find((v) => /^en/i.test(v.lang) && soundsMale(v) && isNatural(v)) || // any natural English male
+    voices.find((v) => /^en/i.test(v.lang) && soundsMale(v)) ||      // any English MALE before female
+    voices.find((v) => /^en/i.test(v.lang)) ||                       // any English voice
     voices[0] || null;
 }
 if (ttsSupported) {
@@ -156,7 +175,12 @@ function speak(text) {
     speechSynthesis.cancel(); // stop anything already speaking
     const u = new SpeechSynthesisUtterance(text);
     if (preferredVoice) u.voice = preferredVoice;
-    u.rate = 1.0;
+    // Tuned for a composed, professional delivery. Adjust to taste:
+    //   rate  — higher is faster (1.0 is default speed)
+    //   pitch — lower is a deeper man's voice with more gravitas
+    // Natural voices sound best near pitch 1.0; a slightly brisk rate keeps it
+    // professional and not sluggish.
+    u.rate = 1.05;
     u.pitch = 1.0;
     // The glow is tied to the ACTUAL speech events, not a timer:
     u.onstart = startSpeakingGlow;

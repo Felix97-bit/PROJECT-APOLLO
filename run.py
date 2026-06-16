@@ -36,22 +36,26 @@ URL = f"http://127.0.0.1:{config.PORT}"
 
 
 def _find_browser():
-    """Find Chrome, then Edge, by checking the usual Windows install spots.
-    Returns the path to the .exe, or None if neither is found."""
+    """Find Edge first, then Chrome, by checking the usual Windows install spots.
+    Returns the path to the .exe, or None if neither is found.
+
+    Edge is preferred because it provides Microsoft's natural neural voices
+    (e.g. "Microsoft Ryan - Natural", a clean British male) that Chrome does not
+    expose. This only affects Apollo's own window — not your default browser."""
     candidates = [
-        # Google Chrome
+        # Microsoft Edge (has the natural-sounding voices we want)
+        os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
+        os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
+        # Google Chrome (fallback)
         os.path.expandvars(r"%ProgramFiles%\Google\Chrome\Application\chrome.exe"),
         os.path.expandvars(r"%ProgramFiles(x86)%\Google\Chrome\Application\chrome.exe"),
         os.path.expandvars(r"%LOCALAPPDATA%\Google\Chrome\Application\chrome.exe"),
-        # Microsoft Edge
-        os.path.expandvars(r"%ProgramFiles(x86)%\Microsoft\Edge\Application\msedge.exe"),
-        os.path.expandvars(r"%ProgramFiles%\Microsoft\Edge\Application\msedge.exe"),
     ]
     for path in candidates:
         if os.path.exists(path):
             return path
     # Last resort: maybe one is on the PATH.
-    return shutil.which("chrome") or shutil.which("msedge")
+    return shutil.which("msedge") or shutil.which("chrome")
 
 
 def _wait_until_up(timeout=20):
