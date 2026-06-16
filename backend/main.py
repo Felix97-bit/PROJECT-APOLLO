@@ -29,6 +29,18 @@ app = FastAPI(title="Apollo")
 _FRONTEND_DIR = os.path.join(_PROJECT_ROOT, "frontend")
 
 
+# Apollo is an app you actively tweak, so we never want the browser serving a
+# stale cached page ("I changed it but still see the old version"). Tell the
+# browser not to cache anything Apollo serves — every reload gets the latest.
+@app.middleware("http")
+async def _no_cache(request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
+
 @app.on_event("startup")
 def _startup():
     """Make sure the memory database is ready before we handle any requests."""
