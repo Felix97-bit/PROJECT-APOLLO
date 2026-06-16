@@ -1,0 +1,404 @@
+/* ===========================================================================
+   Apollo — white & gold design system
+   =========================================================================== */
+
+:root {
+  /* Backgrounds */
+  --bg-main:        #FAF8F2;   /* warm white, not stark */
+  --bg-glow-center: #FFFFFF;   /* subtle radial highlight behind the compass */
+  --bg-glow-edge:   #F3EEE2;
+
+  /* Gold palette */
+  --gold-light:     #F4E5B8;
+  --gold:           #D4AF37;
+  --gold-deep:      #9C7A1E;
+  --gold-glow:      #FFD75E;
+  --gold-accent:    #B8902E;
+
+  /* Text */
+  --text-primary:   #2A2620;
+  --text-secondary: #6B6356;
+
+  /* Surfaces */
+  --surface:        rgba(255, 255, 255, 0.72);
+  --surface-border: rgba(212, 175, 55, 0.28);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body { height: 100%; }
+
+body {
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--text-primary);
+  background: var(--bg-main);
+  overflow: hidden;
+}
+
+/* ---- The stage: full window with a luminous center ---- */
+.stage {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background:
+    radial-gradient(circle at 50% 48%,
+      var(--bg-glow-center) 0%,
+      var(--bg-glow-edge) 70%);
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+}
+
+/* Faint gold stars scattered in the corners */
+.stars { position: absolute; inset: 0; pointer-events: none; }
+.stars .star {
+  position: absolute;
+  background: var(--gold);
+  border-radius: 50%;
+  opacity: 0.18;
+}
+
+/* ===========================================================================
+   CENTERPIECE — the golden compass
+   =========================================================================== */
+.center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  z-index: 1;
+}
+
+.compass-wrap {
+  position: relative;
+  width: 400px;
+  height: 400px;
+  display: grid;
+  place-items: center;
+}
+
+/* The compass SVG itself */
+.compass {
+  width: 400px;
+  height: 400px;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 4px 18px rgba(156, 122, 30, 0.18));
+  transition: filter 0.6s ease;
+}
+
+/* The glow halo behind the compass (hidden until Apollo speaks) */
+.halo {
+  position: absolute;
+  width: 460px;
+  height: 460px;
+  border-radius: 50%;
+  z-index: 1;
+  background: radial-gradient(circle,
+    rgba(255, 215, 94, 0.55) 0%,
+    rgba(255, 215, 94, 0.28) 35%,
+    rgba(255, 215, 94, 0.0) 70%);
+  opacity: 0;                 /* idle: invisible */
+  transform: scale(0.85);
+  transition: opacity 0.5s ease;
+  pointer-events: none;
+}
+
+/* ---- Wordmark + status ---- */
+.wordmark {
+  font-family: "Cinzel", serif;
+  font-weight: 600;
+  font-size: 2.4rem;
+  letter-spacing: 0.42em;
+  /* shift right so the letter-spacing looks optically centered */
+  text-indent: 0.42em;
+  background: linear-gradient(180deg, var(--gold-light), var(--gold) 55%, var(--gold-deep));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.status {
+  font-size: 0.92rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  transition: color 0.4s ease;
+  min-height: 1.2em;
+}
+
+/* ===========================================================================
+   IDLE animation — calm breathing + faint ambient glow
+   =========================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+  .compass { animation: breathe 6s ease-in-out infinite; }
+
+  @keyframes breathe {
+    0%, 100% { transform: scale(1.0); }
+    50%      { transform: scale(1.015); }
+  }
+
+  /* Idle: a very faint ambient glow that's always softly present */
+  .halo { opacity: 0.18; }
+}
+
+/* ===========================================================================
+   SPEAKING state — strong pulsing halo + rotation + brightening
+   Added/removed via the .speaking class on the .compass-wrap by app.js,
+   tied to the actual speech start/end events.
+   =========================================================================== */
+.compass-wrap.speaking .compass {
+  filter: drop-shadow(0 0 26px var(--gold-glow))
+          drop-shadow(0 4px 18px rgba(156, 122, 30, 0.25));
+  animation: speak-brighten 1.2s ease-in-out infinite;
+}
+
+.compass-wrap.speaking .halo {
+  opacity: 0.9;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .compass-wrap.speaking .halo {
+    animation: halo-pulse 1.2s ease-in-out infinite;
+  }
+  /* The rose rotates slowly & continuously while speaking */
+  .compass-wrap.speaking #rose {
+    transform-origin: 200px 200px;
+    animation: rose-spin 16s linear infinite;
+  }
+  /* The center jewel pulses brightest */
+  .compass-wrap.speaking #jewel {
+    transform-origin: 200px 200px;
+    animation: jewel-pulse 1.2s ease-in-out infinite;
+  }
+
+  @keyframes halo-pulse {
+    0%, 100% { opacity: 0.55; transform: scale(0.9); }
+    50%      { opacity: 1.0;  transform: scale(1.06); }
+  }
+  @keyframes rose-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+  @keyframes jewel-pulse {
+    0%, 100% { filter: drop-shadow(0 0 2px var(--gold-glow)); }
+    50%      { filter: drop-shadow(0 0 10px var(--gold-glow)); }
+  }
+}
+
+@keyframes speak-brighten {
+  0%, 100% { filter: drop-shadow(0 0 18px var(--gold-glow)) drop-shadow(0 4px 18px rgba(156,122,30,0.25)); }
+  50%      { filter: drop-shadow(0 0 34px var(--gold-glow)) drop-shadow(0 4px 18px rgba(156,122,30,0.25)); }
+}
+
+/* A single brief glow pulse for when Apollo replies while muted */
+.compass-wrap.pulse-once .halo { animation: pulse-once 1.5s ease-out 1; }
+.compass-wrap.pulse-once .compass { animation: brighten-once 1.5s ease-out 1; }
+@keyframes pulse-once {
+  0%   { opacity: 0.18; transform: scale(0.85); }
+  30%  { opacity: 0.85; transform: scale(1.04); }
+  100% { opacity: 0.18; transform: scale(0.85); }
+}
+@keyframes brighten-once {
+  0%   { filter: drop-shadow(0 4px 18px rgba(156,122,30,0.18)); }
+  30%  { filter: drop-shadow(0 0 26px var(--gold-glow)) drop-shadow(0 4px 18px rgba(156,122,30,0.22)); }
+  100% { filter: drop-shadow(0 4px 18px rgba(156,122,30,0.18)); }
+}
+
+/* Listening state — a calm, cool shimmer */
+.compass-wrap.listening .halo {
+  opacity: 0.5;
+  background: radial-gradient(circle,
+    rgba(180, 210, 230, 0.45) 0%,
+    rgba(180, 210, 230, 0.0) 68%);
+}
+
+/* ===========================================================================
+   CHAT PANEL (top-left)
+   =========================================================================== */
+.chat-panel {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  width: 360px;
+  max-height: calc(100vh - 48px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--surface-border);
+  border-radius: 18px;
+  box-shadow: 0 10px 40px rgba(156, 122, 30, 0.12);
+  z-index: 5;
+  overflow: hidden;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.chat-panel.collapsed {
+  opacity: 0;
+  transform: translateX(-18px) scale(0.98);
+  pointer-events: none;
+}
+
+.chat-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--surface-border);
+}
+.chat-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+  color: var(--gold-accent);
+}
+
+/* Message list */
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 120px;
+}
+
+.msg { max-width: 88%; line-height: 1.5; font-size: 0.94rem; }
+.msg .who {
+  display: block;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-bottom: 3px;
+  color: var(--text-secondary);
+}
+/* Apollo's messages: gold accent, left-aligned */
+.msg.assistant {
+  align-self: flex-start;
+  border-left: 2px solid var(--gold);
+  padding: 2px 0 2px 12px;
+}
+.msg.assistant .who { color: var(--gold-accent); }
+/* User's messages: distinct, right-aligned bubble */
+.msg.user {
+  align-self: flex-end;
+  text-align: right;
+  background: rgba(212, 175, 55, 0.10);
+  border: 1px solid var(--surface-border);
+  border-radius: 12px;
+  padding: 8px 12px;
+  color: var(--text-primary);
+}
+.msg.user .who { text-align: right; }
+
+/* The "Apollo is thinking" indicator */
+.msg.thinking .dots::after {
+  content: "…";
+  animation: thinking 1.2s steps(4, end) infinite;
+}
+@keyframes thinking { 0% { content: "·"; } 50% { content: "··"; } 100% { content: "···"; } }
+
+/* Inline notice (e.g. mic permission denied) */
+.notice {
+  margin: 0 16px 10px;
+  padding: 8px 12px;
+  font-size: 0.84rem;
+  color: #8a5a1e;
+  background: rgba(212, 175, 55, 0.12);
+  border: 1px solid var(--surface-border);
+  border-radius: 10px;
+}
+
+/* Input row */
+.input-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px;
+  border-top: 1px solid var(--surface-border);
+}
+.text-input {
+  flex: 1;
+  border: 1px solid var(--surface-border);
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.94rem;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.text-input:focus {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 3px rgba(212, 175, 55, 0.15);
+}
+
+/* ---- Icon buttons (gold) ---- */
+.icon-btn {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 11px;
+  background: transparent;
+  color: var(--gold-accent);
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease, transform 0.1s ease;
+}
+.icon-btn:hover { background: rgba(212, 175, 55, 0.14); color: var(--gold-deep); }
+.icon-btn:active { transform: scale(0.92); }
+
+.icon-btn.send {
+  background: linear-gradient(180deg, var(--gold-light), var(--gold));
+  color: #fff;
+}
+.icon-btn.send:hover { background: linear-gradient(180deg, var(--gold), var(--gold-accent)); }
+
+/* Mic actively listening */
+.icon-btn.mic.active {
+  background: rgba(212, 175, 55, 0.18);
+  color: var(--gold-deep);
+  animation: mic-pulse 1.1s ease-in-out infinite;
+}
+@keyframes mic-pulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212,175,55,0.4); }
+  50%      { box-shadow: 0 0 0 6px rgba(212,175,55,0.0); }
+}
+
+/* Mute button reflects state via .muted */
+.icon-btn.mute.muted { color: #b54a3a; }
+
+/* Floating restore button (shown when chat is collapsed) */
+.chat-restore {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--surface-border);
+  border-radius: 14px;
+  background: var(--surface);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  color: var(--gold-accent);
+  cursor: pointer;
+  z-index: 5;
+  box-shadow: 0 10px 30px rgba(156, 122, 30, 0.12);
+  transition: transform 0.12s ease, background 0.18s ease;
+}
+.chat-restore:hover { background: rgba(255,255,255,0.85); }
+.chat-restore:active { transform: scale(0.94); }
+
+/* On small windows, let the chat panel shrink gracefully */
+@media (max-width: 760px) {
+  .chat-panel { width: calc(100vw - 48px); }
+  .compass-wrap, .compass { width: 320px; height: 320px; }
+  .halo { width: 380px; height: 380px; }
+}

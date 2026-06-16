@@ -1,0 +1,14 @@
+# --- Apollo: never commit these ---
+
+# Secrets: your real Anthropic API key lives here. NEVER goes to GitHub.
+.env
+
+# Conversation memory database (private personal data, stays on this machine)
+*.db
+
+# Python virtual environment (re-created locally by setup.bat)
+venv/
+
+# Python cache files
+__pycache__/
+*.pyc
