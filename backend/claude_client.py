@@ -1,14 +1,19 @@
 """
-Apollo's connection to Claude (the AI brain).
+Apollo's connection to Claude (the AI brain) + its tools.
 
-ALL Anthropic / Claude API code lives in this one file. If you ever want to change
-how Apollo talks to Claude (or swap to a different provider), this is the only place
-you need to look.
+ALL Anthropic / Claude API code lives in this one file. This is also where
+Apollo's "tools" (its real-world abilities, like Spotify) are registered, so
+Claude can decide on its own to call them when you ask for something.
+
+How tool-use works (the agentic loop):
+  1. We send your message to Claude along with the list of available tools.
+  2. If Claude wants to use a tool, it replies with stop_reason == "tool_use".
+  3. We run that tool (e.g. Spotify play), send the result back to Claude.
+  4. Claude then replies in words, which Apollo speaks/shows.
 
 Key safety behavior:
   - The API key is read from the environment (loaded from your local .env file).
-  - If there is NO key, Apollo does NOT crash. It runs in a friendly "no key yet"
-    mode so you can still open the app and test the interface. (See get_reply.)
+  - If there is NO key, Apollo runs in a friendly "no key yet" mode.
 """
 
 import os
@@ -16,43 +21,105 @@ import os
 from anthropic import Anthropic
 
 from . import config
+from .routers import spotify_router
 
-# Read the system prompt (Apollo's personality) from the editable text file.
 _PROMPTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts"
 )
 _SYSTEM_PROMPT_PATH = os.path.join(_PROMPTS_DIR, "apollo_system.txt")
 
+# How many tool round-trips we allow before forcing a final answer (safety net).
+_MAX_TOOL_LOOPS = 6
+
 
 def _load_system_prompt():
-    """Read Apollo's persona from prompts/apollo_system.txt every call, so edits
-    take effect on the next message without restarting."""
     try:
         with open(_SYSTEM_PROMPT_PATH, "r", encoding="utf-8") as f:
             return f.read().strip()
     except FileNotFoundError:
-        # A sensible fallback if the file is missing.
         return "You are Apollo, a sharp, capable, warm and concise personal assistant."
 
 
 def has_api_key():
-    """True if an Anthropic API key is present in the environment."""
     key = os.environ.get("ANTHROPIC_API_KEY", "").strip()
-    # Treat the placeholder text from .env.example as "no real key".
     return bool(key) and key != "paste-your-key-here"
+
+
+# --- TOOL / ROUTER REGISTRATION ----------------------------------------------
+# To give Apollo a new ability: add a tool definition here, and a matching branch
+# in _execute_tool() that calls your router. (See backend/routers/README.md.)
+def _tools():
+    return [
+        {
+            "name": "play_music",
+            "description": (
+                "Play music on the user's Spotify. Use whenever the user asks to "
+                "play a song, artist, playlist, genre, or mood. Examples: "
+                "'play thunderstruck by acdc' -> kind=track; "
+                "'play my workout playlist' -> kind=playlist; "
+                "'play some rock' -> kind=genre."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "What to play: a song (+artist), playlist name, or genre/mood.",
+                    },
+                    "kind": {
+                        "type": "string",
+                        "enum": ["track", "playlist", "genre", "any"],
+                        "description": "track = a specific song; playlist = a named playlist; "
+                                       "genre = a style/mood; any = unsure.",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+        {
+            "name": "control_playback",
+            "description": "Control current Spotify playback: pause, resume, skip to the "
+                           "next or previous track, or report what's currently playing.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "action": {
+                        "type": "string",
+                        "enum": ["pause", "resume", "next", "previous", "current"],
+                    }
+                },
+                "required": ["action"],
+            },
+        },
+    ]
+
+
+def _execute_tool(name, tool_input):
+    """Run a tool Claude asked for, and return a short text result."""
+    try:
+        if name == "play_music":
+            return spotify_router.play(tool_input.get("query", ""), tool_input.get("kind", "any"))
+        if name == "control_playback":
+            return spotify_router.control(tool_input.get("action", ""))
+        return f"Unknown tool: {name}"
+    except Exception as error:
+        print(f"[Apollo] Tool '{name}' error: {error}")
+        return "That action hit an error on my end."
+
+
+def _text_of(response):
+    """Pull the plain text out of a Claude response."""
+    parts = [block.text for block in response.content if block.type == "text"]
+    return "".join(parts).strip()
 
 
 def get_reply(history, user_message):
     """
-    Ask Claude for a reply.
+    Ask Claude for a reply, letting it use tools (e.g. Spotify) when appropriate.
 
-      history:      list of past messages like [{"role": "user"/"assistant", "content": ...}]
+      history:      list of past messages [{"role": "user"/"assistant", "content": ...}]
       user_message: the new text the user just sent
-
     Returns the reply text (a string).
-
-    - No API key?  -> returns a friendly "add my key" placeholder (no network call).
-    - API error?   -> returns a friendly error message and logs the real error.
     """
     # --- Graceful "no key yet" mode -------------------------------------------
     if not has_api_key():
@@ -61,30 +128,40 @@ def get_reply(history, user_message):
             "file in the Apollo folder, then restart me with run.bat."
         )
 
-    # --- TODO: tool/router registration plugs in here -------------------------
-    # In a future version, this is where Apollo's available "tools" (routers like
-    # Printify, Gmail, n8n, etc.) would be passed to Claude so it can take real
-    # actions. v1 is pure chat — see backend/routers/README.md for how to extend.
-    # --------------------------------------------------------------------------
-
-    # Build the message list Claude expects: the recent history + the new message.
     messages = list(history) + [{"role": "user", "content": user_message}]
+    tools = _tools()
 
     try:
-        client = Anthropic()  # reads ANTHROPIC_API_KEY from the environment
-        response = client.messages.create(
-            model=config.MODEL,
-            max_tokens=config.MAX_TOKENS,
-            system=_load_system_prompt(),
-            messages=messages,
-        )
-        # Concatenate any text blocks in the response into one string.
-        parts = [block.text for block in response.content if block.type == "text"]
-        return "".join(parts).strip() or "(Apollo had nothing to say.)"
+        client = Anthropic()
+        response = None
+        for _ in range(_MAX_TOOL_LOOPS):
+            response = client.messages.create(
+                model=config.MODEL,
+                max_tokens=config.MAX_TOKENS,
+                system=_load_system_prompt(),
+                tools=tools,
+                messages=messages,
+            )
+
+            if response.stop_reason != "tool_use":
+                break
+
+            # Claude wants to use one or more tools. Run them, feed results back.
+            messages.append({"role": "assistant", "content": response.content})
+            tool_results = []
+            for block in response.content:
+                if block.type == "tool_use":
+                    result = _execute_tool(block.name, block.input)
+                    tool_results.append({
+                        "type": "tool_result",
+                        "tool_use_id": block.id,
+                        "content": result,
+                    })
+            messages.append({"role": "user", "content": tool_results})
+
+        return _text_of(response) or "(Apollo had nothing to say.)"
     except Exception as error:
-        # Log the real error to the terminal so you can debug it...
         print(f"[Apollo] Claude API error: {error}")
-        # ...but show the user something friendly.
         return (
             "Apollo had trouble thinking — check your internet connection or that "
             "your API key in .env is correct."

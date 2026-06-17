@@ -15,3 +15,6 @@ __pycache__/
 
 # Launcher log (created when run via the no-console shortcut)
 *.log
+
+# Spotify login token (sensitive — keep it local, never on GitHub)
+spotify_token.json

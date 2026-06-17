@@ -18,11 +18,12 @@ _PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 load_dotenv(os.path.join(_PROJECT_ROOT, ".env"))
 
 from fastapi import FastAPI  # noqa: E402  (imported after load_dotenv on purpose)
-from fastapi.responses import HTMLResponse  # noqa: E402
+from fastapi.responses import HTMLResponse, RedirectResponse  # noqa: E402
 from fastapi.staticfiles import StaticFiles  # noqa: E402
 from pydantic import BaseModel  # noqa: E402
 
 from . import claude_client, config, memory  # noqa: E402
+from .routers import spotify_router  # noqa: E402
 
 app = FastAPI(title="Apollo")
 
@@ -93,6 +94,52 @@ def clear():
     """Wipe all conversation history for a fresh start."""
     memory.clear_all()
     return {"status": "cleared"}
+
+
+# ---- Spotify connector (OAuth login flow) ------------------------------------
+@app.get("/api/spotify/status")
+def spotify_status():
+    """Used by Apollo to know if Spotify is set up and connected."""
+    return {
+        "configured": spotify_router.is_configured(),
+        "connected": spotify_router.is_connected(),
+    }
+
+
+@app.get("/spotify/login")
+def spotify_login():
+    """Send the user to Spotify's 'allow access' page."""
+    if not spotify_router.is_configured():
+        return HTMLResponse(
+            "<h2>Spotify isn't configured yet</h2><p>Add SPOTIFY_CLIENT_ID and "
+            "SPOTIFY_CLIENT_SECRET to your .env file, then relaunch Apollo.</p>"
+        )
+    return RedirectResponse(spotify_router.get_auth_url())
+
+
+@app.get("/spotify/callback")
+def spotify_callback(code: str = None, error: str = None):
+    """Spotify redirects here after the user clicks Agree. We swap the code for tokens."""
+    if error or not code:
+        return HTMLResponse(
+            f"<h2>Spotify connection cancelled</h2><p>{error or 'No code was returned.'} "
+            "You can close this tab.</p>"
+        )
+    try:
+        spotify_router.exchange_code(code)
+    except Exception as e:
+        print(f"[Apollo] Spotify token exchange failed: {e}")
+        return HTMLResponse(
+            "<h2>Couldn't finish connecting</h2><p>Something went wrong exchanging the "
+            "code. Go back to Apollo and try again.</p>"
+        )
+    return HTMLResponse(
+        "<!doctype html><html><body style='font-family:sans-serif;text-align:center;"
+        "padding-top:60px;background:#FAF8F2;color:#2A2620'>"
+        "<h1 style='color:#B8902E'>Apollo is connected to Spotify &#10003;</h1>"
+        "<p>You can close this tab and go back to Apollo. Try saying "
+        "&ldquo;play thunderstruck by acdc&rdquo;.</p></body></html>"
+    )
 
 
 # ---- Serve the frontend ------------------------------------------------------
