@@ -20,7 +20,7 @@ import os
 
 from anthropic import Anthropic
 
-from . import config
+from . import config, memory
 from .routers import spotify_router
 
 _PROMPTS_DIR = os.path.join(
@@ -91,6 +91,28 @@ def _tools():
                 "required": ["action"],
             },
         },
+        {
+            "name": "remember",
+            "description": (
+                "Save a durable fact to long-term memory so you ALWAYS remember it in "
+                "future conversations. Use it when you learn something lasting about "
+                "Felix (his business, clients, preferences, goals) or when you complete "
+                "a piece of work for him. Examples: 'Felix's main client is Henderson "
+                "Roofing', 'Felix prefers dark, minimal UIs', 'Built Felix a landing "
+                "page for his roofing client on 2026-06-17'. Don't save trivial or "
+                "one-off chit-chat — only things worth remembering long-term."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "fact": {
+                        "type": "string",
+                        "description": "One concise, standalone fact or accomplishment to remember.",
+                    }
+                },
+                "required": ["fact"],
+            },
+        },
     ]
 
 
@@ -101,6 +123,12 @@ def _execute_tool(name, tool_input):
             return spotify_router.play(tool_input.get("query", ""), tool_input.get("kind", "any"))
         if name == "control_playback":
             return spotify_router.control(tool_input.get("action", ""))
+        if name == "remember":
+            fact = (tool_input.get("fact") or "").strip()
+            if not fact:
+                return "There was nothing to remember."
+            memory.save_fact(fact)
+            return "Saved to long-term memory."
         return f"Unknown tool: {name}"
     except Exception as error:
         print(f"[Apollo] Tool '{name}' error: {error}")
@@ -113,12 +141,42 @@ def _text_of(response):
     return "".join(parts).strip()
 
 
-def get_reply(history, user_message):
-    """
-    Ask Claude for a reply, letting it use tools (e.g. Spotify) when appropriate.
+def _build_system(facts, relevant):
+    """Assemble Apollo's system prompt: persona + long-term facts + any older
+    messages the keyword search pulled up as relevant to this question."""
+    parts = [_load_system_prompt()]
 
-      history:      list of past messages [{"role": "user"/"assistant", "content": ...}]
-      user_message: the new text the user just sent
+    if facts:
+        parts.append(
+            "\n\n=== LONG-TERM MEMORY — durable facts about Felix and work you've "
+            "done. Treat these as things you already know. ==="
+        )
+        parts.extend(f"- {f}" for f in facts)
+
+    if relevant:
+        parts.append(
+            "\n\n=== EARLIER MESSAGES (retrieved from older history by keyword search; "
+            "they're outside the recent conversation and MAY be relevant — use them "
+            "only if they actually help answer Felix). ==="
+        )
+        for m in relevant:
+            who = "Felix" if m["role"] == "user" else "You (Apollo)"
+            snippet = " ".join(m["content"].split())
+            if len(snippet) > 300:
+                snippet = snippet[:300] + "…"
+            parts.append(f"- {who}: {snippet}")
+
+    return "\n".join(parts)
+
+
+def get_reply(user_message):
+    """
+    Ask Claude for a reply, with Apollo's full memory:
+      - the recent conversation window (config.MAX_HISTORY messages),
+      - durable facts (always remembered),
+      - relevant OLDER messages found by keyword search,
+    and let it use tools (Spotify, remember) when appropriate.
+
     Returns the reply text (a string).
     """
     # --- Graceful "no key yet" mode -------------------------------------------
@@ -128,7 +186,21 @@ def get_reply(history, user_message):
             "file in the Apollo folder, then restart me with run.bat."
         )
 
-    messages = list(history) + [{"role": "user", "content": user_message}]
+    # Recent conversation (with ids so we don't re-surface them via search).
+    recent = memory.get_recent_full(config.MAX_HISTORY)
+    recent_ids = {m["id"] for m in recent}
+    history = [{"role": m["role"], "content": m["content"]} for m in recent]
+
+    # Long-term facts + relevant older messages.
+    facts = memory.get_facts(60)
+    try:
+        relevant = memory.search_memory(user_message, limit=4, exclude_ids=recent_ids)
+    except Exception as error:
+        print(f"[Apollo] memory search error: {error}")
+        relevant = []
+
+    system = _build_system(facts, relevant)
+    messages = history + [{"role": "user", "content": user_message}]
     tools = _tools()
 
     try:
@@ -138,7 +210,7 @@ def get_reply(history, user_message):
             response = client.messages.create(
                 model=config.MODEL,
                 max_tokens=config.MAX_TOKENS,
-                system=_load_system_prompt(),
+                system=system,
                 tools=tools,
                 messages=messages,
             )

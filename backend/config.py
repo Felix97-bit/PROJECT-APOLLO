@@ -13,7 +13,9 @@ MODEL = "claude-sonnet-4-6"
 
 # How many past messages (user + Apollo) to send to Claude as context each turn.
 # Higher = Apollo remembers more of the recent conversation, but costs a bit more.
-MAX_HISTORY = 20
+# (Beyond this window, Apollo's keyword memory search pulls in relevant older
+#  messages on demand, and its facts memory keeps durable info permanently.)
+MAX_HISTORY = 30
 
 # The maximum length of a single Apollo reply, measured in tokens (~ words).
 MAX_TOKENS = 1024

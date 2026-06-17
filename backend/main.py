@@ -73,8 +73,9 @@ def chat(request: ChatRequest):
     if not user_message:
         return {"reply": "I didn't catch that — try typing something."}
 
-    history = memory.get_recent(config.MAX_HISTORY)
-    reply = claude_client.get_reply(history, user_message)
+    # get_reply pulls in recent history + long-term facts + relevant older
+    # messages on its own, so we just hand it the new message.
+    reply = claude_client.get_reply(user_message)
 
     # Save the exchange so Apollo remembers it next time.
     memory.save_message("user", user_message)
