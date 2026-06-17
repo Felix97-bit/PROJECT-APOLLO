@@ -19,6 +19,7 @@ Notes:
 
 import json
 import os
+import re
 import time
 import webbrowser
 from urllib.parse import urlencode
@@ -210,11 +211,67 @@ def _ready():
 
 
 # ---- Public actions (these are what Apollo calls) ---------------------------
+# Words we ignore when matching a spoken request to one of YOUR playlist names.
+_PLAYLIST_STOP = {"my", "the", "a", "play", "playlist", "playlists", "mix",
+                  "song", "songs", "music", "please", "some", "to"}
+
+
+def _find_user_playlist(token, name):
+    """Find the user's OWN playlist whose name best matches `name`.
+    Returns the playlist object, or None if nothing reasonable matches."""
+    r = _api("GET", "/me/playlists", token, params={"limit": 50})
+    if r.status_code != 200:
+        return None
+    items = [p for p in r.json().get("items", []) if p]
+    if not items:
+        return None
+    nl = name.lower().strip()
+    q_words = {w for w in re.findall(r"[a-z0-9]+", nl) if w not in _PLAYLIST_STOP}
+    best, best_score = None, 0
+    for pl in items:
+        pname = (pl.get("name") or "")
+        plow = pname.lower()
+        if nl and nl in plow:           # direct substring match wins outright
+            return pl
+        score = len(q_words & set(re.findall(r"[a-z0-9]+", plow)))
+        if score > best_score:
+            best, best_score = pl, score
+    return best if best_score > 0 else None
+
+
+def _play_track(token, query):
+    track = _first(_search(token, query, "track"), "tracks")
+    if not track:
+        return f"I couldn't find a track for '{query}'."
+    label = f"{track['name']} by {track['artists'][0]['name']}"
+    return _start(token, {"uris": [track["uri"]]}, label)
+
+
+def _play_artist(token, query):
+    """Play an artist's music (Spotify plays their popular songs as a queue)."""
+    artist = _first(_search(token, query, "artist"), "artists")
+    if not artist:
+        return f"I couldn't find an artist called '{query}'."
+    return _start(token, {"context_uri": artist["uri"]}, f"songs by {artist['name']}")
+
+
+def _play_playlist(token, query):
+    """Play one of the user's OWN playlists by name; fall back to a public one."""
+    pl = _find_user_playlist(token, query)
+    if pl:
+        return _start(token, {"context_uri": pl["uri"]}, f"your playlist '{pl['name']}'")
+    public = _first(_search(token, query, "playlist"), "playlists")
+    if public:
+        return _start(token, {"context_uri": public["uri"]}, public["name"])
+    return (f"I couldn't find a playlist matching '{query}'. If it's one of yours, "
+            "try the exact name.")
+
+
 def play(query, kind="any"):
     """
     Play music on Spotify.
-      query: a song+artist, a playlist name, or a genre/mood.
-      kind:  "track" | "playlist" | "genre" | "any"
+      query: a song(+artist), an artist name, one of YOUR playlist names, or a genre/mood.
+      kind:  "track" | "artist" | "playlist" | "genre" | "any"
     Returns a short status message Apollo speaks back.
     """
     token, msg = _ready()
@@ -227,53 +284,49 @@ def play(query, kind="any"):
 
     try:
         if kind == "track":
-            track = _first(_search(token, query, "track"), "tracks")
-            if not track:
-                return f"I couldn't find a track for '{query}'."
-            label = f"{track['name']} by {track['artists'][0]['name']}"
-            return _start(token, {"uris": [track["uri"]]}, label)
-
-        if kind in ("playlist", "genre"):
+            return _play_track(token, query)
+        if kind == "artist":
+            return _play_artist(token, query)
+        if kind == "playlist":
+            return _play_playlist(token, query)
+        if kind == "genre":
             pl = _first(_search(token, query, "playlist"), "playlists")
             if not pl:
-                return f"I couldn't find a playlist for '{query}'."
+                return f"I couldn't find a {query} playlist."
             return _start(token, {"context_uri": pl["uri"]}, pl["name"])
 
-        # "any": prefer an exact track, else a playlist
-        results = _search(token, query, "track,playlist")
-        track = _first(results, "tracks")
+        # "any": prefer an exact track, then one of the user's playlists
+        track = _first(_search(token, query, "track"), "tracks")
         if track:
             label = f"{track['name']} by {track['artists'][0]['name']}"
             return _start(token, {"uris": [track["uri"]]}, label)
-        pl = _first(results, "playlists")
-        if pl:
-            return _start(token, {"context_uri": pl["uri"]}, pl["name"])
-        return f"I couldn't find anything for '{query}'."
+        return _play_playlist(token, query)
     except httpx.HTTPError:
         return "I had trouble reaching Spotify just now — try again in a moment."
 
 
-def play_named_playlist(name):
-    """Play one of the user's OWN playlists by (fuzzy) name; falls back to search."""
+def queue(query):
+    """Add a specific song to the queue WITHOUT interrupting what's playing."""
     token, msg = _ready()
     if msg:
         return msg
-    name = (name or "").strip()
+    query = (query or "").strip()
+    if not query:
+        return "What should I add to the queue?"
     try:
-        r = _api("GET", "/me/playlists", token, params={"limit": 50})
-        if r.status_code == 200:
-            lowered = name.lower()
-            best = None
-            for pl in r.json().get("items", []):
-                if pl and lowered in (pl.get("name", "").lower()):
-                    best = pl
-                    break
-            if best:
-                return _start(token, {"context_uri": best["uri"]}, best["name"])
+        track = _first(_search(token, query, "track"), "tracks")
+        if not track:
+            return f"I couldn't find a track for '{query}'."
+        did = _device_id(token)
+        if not did:
+            return _NO_DEVICE
+        r = _api("POST", "/me/player/queue", token,
+                 params={"uri": track["uri"], "device_id": did})
+        if r.status_code in (200, 202, 204):
+            return f"Added {track['name']} by {track['artists'][0]['name']} to your queue."
+        return _play_error(r)
     except httpx.HTTPError:
-        pass
-    # Fall back to a public playlist search
-    return play(name, "playlist")
+        return "I had trouble reaching Spotify just now — try again in a moment."
 
 
 def control(action):

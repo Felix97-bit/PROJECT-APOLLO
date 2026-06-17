@@ -53,25 +53,47 @@ def _tools():
         {
             "name": "play_music",
             "description": (
-                "Play music on the user's Spotify. Use whenever the user asks to "
-                "play a song, artist, playlist, genre, or mood. Examples: "
-                "'play thunderstruck by acdc' -> kind=track; "
-                "'play my workout playlist' -> kind=playlist; "
-                "'play some rock' -> kind=genre."
+                "Play music on the user's Spotify. Use whenever the user asks to play a "
+                "song, an artist's music, one of THEIR OWN playlists, or a genre/mood. "
+                "Choose kind carefully:\n"
+                "- kind=track: a specific song, e.g. 'play thunderstruck by acdc'.\n"
+                "- kind=artist: an artist's songs, e.g. 'play some morgan wallen' or "
+                "'play songs from my favourite country artist' (put the artist's name in "
+                "query). This starts a running queue of that artist's music.\n"
+                "- kind=playlist: one of the USER'S OWN playlists by name, e.g. 'play my "
+                "workout playlist' -> query='workout'. It searches the user's own library "
+                "first, so prefer this whenever they say 'my ... playlist'.\n"
+                "- kind=genre: a style or mood, e.g. 'play some rock'.\n"
+                "Use kind=any only if you genuinely can't tell."
             ),
             "input_schema": {
                 "type": "object",
                 "properties": {
                     "query": {
                         "type": "string",
-                        "description": "What to play: a song (+artist), playlist name, or genre/mood.",
+                        "description": "What to play: a song (+artist), an artist name, a "
+                                       "playlist name, or a genre/mood.",
                     },
                     "kind": {
                         "type": "string",
-                        "enum": ["track", "playlist", "genre", "any"],
-                        "description": "track = a specific song; playlist = a named playlist; "
-                                       "genre = a style/mood; any = unsure.",
+                        "enum": ["track", "artist", "playlist", "genre", "any"],
                     },
+                },
+                "required": ["query"],
+            },
+        },
+        {
+            "name": "queue_music",
+            "description": "Add a specific song to the user's Spotify queue WITHOUT "
+                           "interrupting what's currently playing. Use for 'queue up X', "
+                           "'add X to the queue', or 'play X next'.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "The song (ideally with the artist) to add to the queue.",
+                    }
                 },
                 "required": ["query"],
             },
@@ -121,6 +143,8 @@ def _execute_tool(name, tool_input):
     try:
         if name == "play_music":
             return spotify_router.play(tool_input.get("query", ""), tool_input.get("kind", "any"))
+        if name == "queue_music":
+            return spotify_router.queue(tool_input.get("query", ""))
         if name == "control_playback":
             return spotify_router.control(tool_input.get("action", ""))
         if name == "remember":
