@@ -18,3 +18,7 @@ __pycache__/
 
 # Spotify login token (sensitive — keep it local, never on GitHub)
 spotify_token.json
+
+# Knowledge base — private personal/client notes, keep local. README is committed.
+knowledge/*
+!knowledge/README.md

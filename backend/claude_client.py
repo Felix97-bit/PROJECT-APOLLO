@@ -20,7 +20,7 @@ import os
 
 from anthropic import Anthropic
 
-from . import config, memory
+from . import config, knowledge, memory
 from .routers import spotify_router
 
 _PROMPTS_DIR = os.path.join(
@@ -165,10 +165,16 @@ def _text_of(response):
     return "".join(parts).strip()
 
 
-def _build_system(facts, relevant):
-    """Assemble Apollo's system prompt: persona + long-term facts + any older
-    messages the keyword search pulled up as relevant to this question."""
+def _build_system(brain, facts, relevant):
+    """Assemble Apollo's system prompt: persona + the knowledge-base brain +
+    long-term facts + any older messages the keyword search pulled up."""
     parts = [_load_system_prompt()]
+
+    if brain:
+        parts.append(
+            "\n\n=== YOUR KNOWLEDGE OF FELIX (your brain — durable, always true "
+            "unless he updates it) ===\n" + brain
+        )
 
     if facts:
         parts.append(
@@ -215,7 +221,8 @@ def get_reply(user_message):
     recent_ids = {m["id"] for m in recent}
     history = [{"role": m["role"], "content": m["content"]} for m in recent]
 
-    # Long-term facts + relevant older messages.
+    # Long-term knowledge (the brain) + facts + relevant older messages.
+    brain = knowledge.load_brain()
     facts = memory.get_facts(60)
     try:
         relevant = memory.search_memory(user_message, limit=4, exclude_ids=recent_ids)
@@ -223,7 +230,7 @@ def get_reply(user_message):
         print(f"[Apollo] memory search error: {error}")
         relevant = []
 
-    system = _build_system(facts, relevant)
+    system = _build_system(brain, facts, relevant)
     messages = history + [{"role": "user", "content": user_message}]
     tools = _tools()
 
