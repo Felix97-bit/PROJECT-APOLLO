@@ -421,7 +421,13 @@ body {
   flex-direction: column;
   gap: 12px;
   min-height: 120px;
+  /* Colorless scrollbar — it stays scrollable but the bar blends in. */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
 }
+.messages::-webkit-scrollbar { width: 8px; }
+.messages::-webkit-scrollbar-track { background: transparent; }
+.messages::-webkit-scrollbar-thumb { background: transparent; }
 
 .msg { max-width: 88%; line-height: 1.5; font-size: 0.94rem; }
 .msg .who {
@@ -480,7 +486,8 @@ body {
 .text-input {
   flex: 1;
   border: 1px solid var(--surface-border);
-  background: rgba(255, 255, 255, 0.6);
+  /* Transparent — same as the rest of the (now see-through) chat panel. */
+  background: transparent;
   border-radius: 12px;
   padding: 10px 12px;
   font-size: 0.94rem;
