@@ -13,6 +13,7 @@ they hold private personal and client information.
 
 import glob
 import os
+from datetime import date
 
 _KNOWLEDGE_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "knowledge"
@@ -36,3 +37,24 @@ def load_brain():
         except OSError:
             continue
     return "\n\n".join(parts)
+
+
+def add_workflow(name, content):
+    """Append a named workflow/SOP to knowledge/workflows.md. Because that file
+    lives in knowledge/, it's automatically loaded into Apollo's context every
+    session — so a workflow taught once is remembered permanently."""
+    name = (name or "").strip()
+    content = (content or "").strip()
+    if not name or not content:
+        return False
+    os.makedirs(_KNOWLEDGE_DIR, exist_ok=True)
+    path = os.path.join(_KNOWLEDGE_DIR, "workflows.md")
+    new_file = not os.path.exists(path)
+    with open(path, "a", encoding="utf-8") as f:
+        if new_file:
+            f.write(
+                "# Felix's Workflows & Standard Procedures\n\n"
+                "Workflows Apollo has been taught. Loaded into context every session.\n"
+            )
+        f.write(f"\n\n## {name}\n_(saved {date.today().isoformat()})_\n\n{content}\n")
+    return True

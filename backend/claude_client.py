@@ -135,6 +135,31 @@ def _tools():
                 "required": ["fact"],
             },
         },
+        {
+            "name": "save_workflow",
+            "description": (
+                "Save a named workflow / standard operating procedure / repeatable job to "
+                "Felix's permanent knowledge base, so you ALWAYS know how to do it in every "
+                "future session. Use this (not 'remember') whenever Felix teaches you a "
+                "multi-step process or says things like 'here's how I do X, remember it' or "
+                "'remember this workflow'. Capture the FULL steps, tools, and details clearly "
+                "enough that you could follow them later. Confirm back to him what you saved."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "Short title, e.g. 'Client onboarding' or 'Cold outreach build'.",
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The full workflow — steps, tools, and details, written clearly.",
+                    },
+                },
+                "required": ["name", "content"],
+            },
+        },
     ]
 
 
@@ -153,6 +178,11 @@ def _execute_tool(name, tool_input):
                 return "There was nothing to remember."
             memory.save_fact(fact)
             return "Saved to long-term memory."
+        if name == "save_workflow":
+            ok = knowledge.add_workflow(tool_input.get("name", ""), tool_input.get("content", ""))
+            if ok:
+                return f"Saved the '{tool_input.get('name', '').strip()}' workflow to your knowledge base."
+            return "I need both a name and the steps to save a workflow."
         return f"Unknown tool: {name}"
     except Exception as error:
         print(f"[Apollo] Tool '{name}' error: {error}")
