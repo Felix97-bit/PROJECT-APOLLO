@@ -21,7 +21,7 @@ import os
 from anthropic import Anthropic
 
 from . import config, knowledge, memory
-from .routers import spotify_router
+from .routers import email_router, spotify_router
 
 _PROMPTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts"
@@ -114,6 +114,48 @@ def _tools():
             },
         },
         {
+            "name": "check_email",
+            "description": (
+                "Read Felix's most recent emails from his inbox so you can summarize them, "
+                "pull out client requests, flag anything urgent, etc. Returns sender, "
+                "subject, date, and a body excerpt for each. Set unread_only=true to only "
+                "look at unread mail. Use this whenever Felix asks about his email/inbox."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "count": {
+                        "type": "integer",
+                        "description": "How many recent emails to fetch (default 10, max 25).",
+                    },
+                    "unread_only": {
+                        "type": "boolean",
+                        "description": "If true, only return unread emails.",
+                    },
+                },
+            },
+        },
+        {
+            "name": "search_email",
+            "description": "Search Felix's recent inbox for emails matching a keyword, "
+                           "sender, or topic (e.g. a client name). Returns matching emails "
+                           "with sender, subject, date, and excerpt.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {
+                        "type": "string",
+                        "description": "Keyword, sender, or topic to look for.",
+                    },
+                    "count": {
+                        "type": "integer",
+                        "description": "Max emails to return (default 10).",
+                    },
+                },
+                "required": ["query"],
+            },
+        },
+        {
             "name": "remember",
             "description": (
                 "Save a durable fact to long-term memory so you ALWAYS remember it in "
@@ -172,6 +214,14 @@ def _execute_tool(name, tool_input):
             return spotify_router.queue(tool_input.get("query", ""))
         if name == "control_playback":
             return spotify_router.control(tool_input.get("action", ""))
+        if name == "check_email":
+            return email_router.check_email(
+                tool_input.get("count", 10), tool_input.get("unread_only", False)
+            )
+        if name == "search_email":
+            return email_router.search_email(
+                tool_input.get("query", ""), tool_input.get("count", 10)
+            )
         if name == "remember":
             fact = (tool_input.get("fact") or "").strip()
             if not fact:
