@@ -382,12 +382,11 @@ body {
   max-height: calc(50vh - 24px);
   display: flex;
   flex-direction: column;
-  background: var(--surface);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-  border: 1px solid var(--surface-border);
+  /* Transparent panel — no white card, just the chat content floating over the
+     stage. (Messages, buttons, and the minimize toggle all stay.) */
+  background: transparent;
+  border: none;
   border-radius: 18px;
-  box-shadow: 0 10px 40px rgba(156, 122, 30, 0.12);
   z-index: 5;
   overflow: hidden;
   transition: opacity 0.25s ease, transform 0.25s ease;
