@@ -17,11 +17,13 @@ Security:
 Uses httpx (already a dependency).
 """
 
+import base64
 import os
 
 import httpx
 
 API = "https://api.github.com"
+_MAX_FILE_CHARS = 6000  # cap a single file's content so it doesn't blow up the context
 
 
 def _token():
@@ -146,3 +148,85 @@ def create_repo(name, description="", private=True):
         return f"GitHub wouldn't create the repo (error {r.status_code})."
     except httpx.HTTPError:
         return "I couldn't reach GitHub just now, sir."
+
+
+def _resolve_full_name(repo):
+    """Turn a short repo name into 'owner/name' (handles owned + collaborator repos)."""
+    repo = (repo or "").strip().rstrip("/")
+    if "/" in repo:
+        return repo
+    me = whoami()
+    if me:
+        r = _api("GET", f"/repos/{me}/{repo}")
+        if r.status_code == 200:
+            return r.json().get("full_name")
+    r = _all_repos()
+    if r.status_code == 200:
+        for rp in r.json():
+            if rp["name"].lower() == repo.lower():
+                return rp["full_name"]
+    return None
+
+
+def list_files(repo):
+    """List every file inside a repository (the full structure), so Apollo can
+    see what's in it."""
+    if not is_configured():
+        return "GitHub isn't set up yet — add your GITHUB_TOKEN to .env first."
+    full = _resolve_full_name(repo)
+    if not full:
+        return f"I couldn't find a repository called '{repo}'."
+    try:
+        info = _api("GET", f"/repos/{full}")
+        if info.status_code != 200:
+            return f"I couldn't open {full} (error {info.status_code})."
+        branch = info.json().get("default_branch", "main")
+        r = _api("GET", f"/repos/{full}/git/trees/{branch}", params={"recursive": "1"})
+        if r.status_code != 200:
+            return f"{full} looks empty, or I couldn't read its files (error {r.status_code})."
+        files = [t["path"] for t in r.json().get("tree", []) if t.get("type") == "blob"]
+    except httpx.HTTPError:
+        return "I couldn't reach GitHub just now, sir."
+    if not files:
+        return f"{full} has no files yet."
+    shown = files[:250]
+    body = "\n".join(f"- {p}" for p in shown)
+    extra = "" if len(files) <= 250 else f"\n…and {len(files) - 250} more"
+    return f"{full} contains {len(files)} files:\n{body}{extra}"
+
+
+def read_file(repo, path):
+    """Read the contents of a specific file in a repository (or list a folder)."""
+    if not is_configured():
+        return "GitHub isn't set up yet — add your GITHUB_TOKEN to .env first."
+    full = _resolve_full_name(repo)
+    if not full:
+        return f"I couldn't find a repository called '{repo}'."
+    path = (path or "").strip().lstrip("/")
+    if not path:
+        return "Which file should I read?"
+    try:
+        r = _api("GET", f"/repos/{full}/contents/{path}")
+        if r.status_code == 404:
+            return f"I couldn't find '{path}' in {full}."
+        if r.status_code != 200:
+            return f"GitHub error reading '{path}' ({r.status_code})."
+        data = r.json()
+    except httpx.HTTPError:
+        return "I couldn't reach GitHub just now, sir."
+    if isinstance(data, list):  # it's a folder
+        items = [f"{i['name']} ({i['type']})" for i in data]
+        return f"'{path}' is a folder in {full}:\n" + "\n".join(f"- {i}" for i in items)
+    if data.get("encoding") == "base64":
+        try:
+            raw = base64.b64decode(data.get("content", ""))
+            text = raw.decode("utf-8")
+        except UnicodeDecodeError:
+            return f"'{path}' is a binary file ({data.get('size', 0)} bytes) — I can't show its contents."
+        except Exception:
+            return f"I couldn't decode '{path}'."
+    else:
+        text = data.get("content", "")
+    if len(text) > _MAX_FILE_CHARS:
+        text = text[:_MAX_FILE_CHARS] + "\n…[truncated]"
+    return f"{full}/{path}:\n\n{text}"

@@ -197,6 +197,33 @@ def _tools():
             },
         },
         {
+            "name": "list_repo_files",
+            "description": "Look inside one of Felix's GitHub repositories — list ALL the "
+                           "files in it so you can see its structure/contents. Use when he "
+                           "asks what's in a repo or to look inside one.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "repo": {"type": "string", "description": "Repository name (e.g. 'PROJECT-APOLLO' or 'owner/name')."}
+                },
+                "required": ["repo"],
+            },
+        },
+        {
+            "name": "read_repo_file",
+            "description": "Read the contents of a specific file inside one of Felix's GitHub "
+                           "repositories (or list a folder). Use after list_repo_files to "
+                           "inspect a particular file.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "repo": {"type": "string", "description": "Repository name."},
+                    "path": {"type": "string", "description": "Path within the repo, e.g. 'backend/main.py' or 'README.md'."},
+                },
+                "required": ["repo", "path"],
+            },
+        },
+        {
             "name": "remember",
             "description": (
                 "Save a durable fact to long-term memory so you ALWAYS remember it in "
@@ -273,6 +300,10 @@ def _execute_tool(name, tool_input):
                 tool_input.get("description", ""),
                 tool_input.get("private", True),
             )
+        if name == "list_repo_files":
+            return github_router.list_files(tool_input.get("repo", ""))
+        if name == "read_repo_file":
+            return github_router.read_file(tool_input.get("repo", ""), tool_input.get("path", ""))
         if name == "remember":
             fact = (tool_input.get("fact") or "").strip()
             if not fact:
