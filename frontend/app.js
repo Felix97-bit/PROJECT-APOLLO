@@ -18,6 +18,7 @@ const els = {
   micBtn:      document.getElementById("micBtn"),
   muteBtn:     document.getElementById("muteBtn"),
   collapseBtn: document.getElementById("collapseBtn"),
+  clearBtn:    document.getElementById("clearBtn"),
   chatPanel:   document.getElementById("chatPanel"),
   chatRestore: document.getElementById("chatRestore"),
   status:      document.getElementById("status"),
@@ -72,7 +73,7 @@ function addMessage(role, text) {
 function showThinking() {
   const wrap = document.createElement("div");
   wrap.className = "msg assistant thinking";
-  wrap.innerHTML = '<span class="who">Apollo</span><span class="dots">thinking</span>';
+  wrap.innerHTML = '<span class="who">Apollo</span><span class="dots">processing</span>';
   els.messages.appendChild(wrap);
   els.messages.scrollTop = els.messages.scrollHeight;
   return wrap;
@@ -81,9 +82,24 @@ function showThinking() {
 // ===========================================================================
 // CHAT — talking to the backend
 // ===========================================================================
+// Wipe the conversation (UI + the server's stored history). Used by the /clear
+// command and the clear button. Facts/workflows and the brain are NOT affected.
+function clearChat() {
+  fetch("/api/clear", { method: "POST" }).catch((e) => console.error(e));
+  els.messages.innerHTML = "";
+  els.input.focus();
+}
+
 async function sendMessage() {
   const text = els.input.value.trim();
   if (!text) return;
+
+  // Typed command to clear the chat.
+  if (text.toLowerCase() === "/clear" || text.toLowerCase() === "/clear chat") {
+    els.input.value = "";
+    clearChat();
+    return;
+  }
 
   addMessage("user", text);
   els.input.value = "";
@@ -208,7 +224,7 @@ function speak(text) {
     //   pitch — lower is a deeper man's voice with more gravitas
     // Natural voices sound best near pitch 1.0; a slightly brisk rate keeps it
     // professional and not sluggish.
-    u.rate = 1.05;
+    u.rate = 1.15;
     u.pitch = 1.0;
     // The glow is tied to the ACTUAL speech events, not a timer:
     u.onstart = startSpeakingGlow;
@@ -420,6 +436,7 @@ els.input.addEventListener("keydown", (e) => { if (e.key === "Enter") sendMessag
 els.muteBtn.addEventListener("click", toggleMute);
 els.micBtn.addEventListener("click", toggleMic);
 els.collapseBtn.addEventListener("click", collapseChat);
+if (els.clearBtn) els.clearBtn.addEventListener("click", clearChat);
 els.chatRestore.addEventListener("click", restoreChat);
 
 renderMuteButton();

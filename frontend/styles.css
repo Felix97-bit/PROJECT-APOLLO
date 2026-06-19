@@ -411,6 +411,11 @@ body {
   letter-spacing: 0.04em;
   color: var(--gold-accent);
 }
+.chat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
 
 /* Message list */
 .messages {
