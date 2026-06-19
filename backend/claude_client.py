@@ -21,7 +21,7 @@ import os
 from anthropic import Anthropic
 
 from . import config, knowledge, memory
-from .routers import email_router, spotify_router
+from .routers import email_router, github_router, spotify_router
 
 _PROMPTS_DIR = os.path.join(
     os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts"
@@ -156,6 +156,47 @@ def _tools():
             },
         },
         {
+            "name": "list_repos",
+            "description": "List the GitHub repositories Felix has access to (most recently "
+                           "updated first), with name, visibility, and description. Use when "
+                           "he asks about his repos / GitHub.",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "count": {"type": "integer", "description": "How many to show (default 20, max 50)."}
+                },
+            },
+        },
+        {
+            "name": "search_repos",
+            "description": "Find Felix's GitHub repositories by name or description keyword "
+                           "(e.g. a client name).",
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "query": {"type": "string", "description": "Keyword to search repo names/descriptions."}
+                },
+                "required": ["query"],
+            },
+        },
+        {
+            "name": "create_repo",
+            "description": (
+                "Create a NEW GitHub repository on Felix's account. This is a write action — "
+                "only use it when Felix explicitly asks to create a repo (e.g. 'create a repo "
+                "called northern-lights-appraisals'). Defaults to private."
+            ),
+            "input_schema": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string", "description": "Repository name (e.g. 'northern-lights-appraisals')."},
+                    "description": {"type": "string", "description": "Optional short description."},
+                    "private": {"type": "boolean", "description": "Private repo? Default true."},
+                },
+                "required": ["name"],
+            },
+        },
+        {
             "name": "remember",
             "description": (
                 "Save a durable fact to long-term memory so you ALWAYS remember it in "
@@ -221,6 +262,16 @@ def _execute_tool(name, tool_input):
         if name == "search_email":
             return email_router.search_email(
                 tool_input.get("query", ""), tool_input.get("count", 10)
+            )
+        if name == "list_repos":
+            return github_router.list_repos(tool_input.get("count", 20))
+        if name == "search_repos":
+            return github_router.search_repos(tool_input.get("query", ""))
+        if name == "create_repo":
+            return github_router.create_repo(
+                tool_input.get("name", ""),
+                tool_input.get("description", ""),
+                tool_input.get("private", True),
             )
         if name == "remember":
             fact = (tool_input.get("fact") or "").strip()
