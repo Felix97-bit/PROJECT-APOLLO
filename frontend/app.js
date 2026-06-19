@@ -174,11 +174,34 @@ if (ttsSupported) {
 }
 
 // Returns true if it actually spoke, false if muted/unsupported.
+// Turn Apollo's reply (which contains Markdown) into clean, natural speech — so it
+// never reads out "asterisk", "hash", bullet symbols, URLs, or emoji.
+function speakable(text) {
+  let t = String(text);
+  t = t.replace(/```[\s\S]*?```/g, " ");            // drop fenced code blocks
+  t = t.replace(/`([^`]+)`/g, "$1");                // inline `code` -> keep text
+  t = t.replace(/!?\[([^\]]+)\]\([^)]*\)/g, "$1");   // [label](url) -> label
+  t = t.replace(/https?:\/\/\S+/g, " ");            // drop bare URLs
+  t = t.replace(/^\s{0,3}#{1,6}\s*/gm, "");          // headings
+  t = t.replace(/^\s{0,3}>\s?/gm, "");              // blockquotes
+  t = t.replace(/^\s*[-*+]\s+/gm, "");              // bullet markers
+  t = t.replace(/\*\*([^*]+)\*\*/g, "$1");          // **bold**
+  t = t.replace(/\*([^*]+)\*/g, "$1");              // *italic*
+  t = t.replace(/__([^_]+)__/g, "$1");              // __bold__
+  t = t.replace(/_([^_]+)_/g, "$1");                // _italic_
+  t = t.replace(/[*_`#>~|]/g, "");                  // any stray markdown symbols
+  // strip emoji, arrows, dingbats and other non-spoken pictographs
+  t = t.replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{2190}-\u{21FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu, "");
+  return t.replace(/\s+/g, " ").trim();
+}
+
 function speak(text) {
   if (isMuted || !ttsSupported) return false;
+  const clean = speakable(text);
+  if (!clean) return false;
   try {
     speechSynthesis.cancel(); // stop anything already speaking
-    const u = new SpeechSynthesisUtterance(text);
+    const u = new SpeechSynthesisUtterance(clean);
     if (preferredVoice) u.voice = preferredVoice;
     // Tuned for a composed, professional delivery. Adjust to taste:
     //   rate  — higher is faster (1.0 is default speed)
