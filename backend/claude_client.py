@@ -270,6 +270,11 @@ def _tools():
                 "required": ["name", "content"],
             },
         },
+        # --- Server-side web tools: run by Anthropic, giving Apollo live web access.
+        #     web_search = search the web; web_fetch = read a specific URL. max_uses
+        #     caps how many calls per message (cost safety). ---
+        {"type": "web_search_20260209", "name": "web_search", "max_uses": 5},
+        {"type": "web_fetch_20260209", "name": "web_fetch", "max_uses": 5},
     ]
 
 
@@ -428,10 +433,16 @@ def get_reply(user_message):
                 messages=messages,
             )
 
+            if response.stop_reason == "pause_turn":
+                # A server-side web tool (search/fetch) paused mid-run — re-send the
+                # conversation so Anthropic resumes where it left off.
+                messages.append({"role": "assistant", "content": response.content})
+                continue
+
             if response.stop_reason != "tool_use":
                 break
 
-            # Claude wants to use one or more tools. Run them, feed results back.
+            # Claude wants to use one or more (client-side) tools. Run them, feed back.
             messages.append({"role": "assistant", "content": response.content})
             tool_results = []
             for block in response.content:
