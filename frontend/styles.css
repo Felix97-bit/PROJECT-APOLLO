@@ -462,6 +462,27 @@ body {
 }
 .msg.user .who { text-align: right; }
 
+/* Rendered Markdown inside a message */
+.msg-body { line-height: 1.5; word-wrap: break-word; overflow-wrap: anywhere; }
+.msg-body strong { color: var(--text-primary); font-weight: 700; }
+.msg-body a { color: var(--gold-accent); }
+.msg-body code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 0.88em;
+  background: rgba(212, 175, 55, 0.14);
+  padding: 1px 5px;
+  border-radius: 5px;
+}
+.msg-body pre {
+  background: rgba(212, 175, 55, 0.10);
+  border: 1px solid var(--surface-border);
+  border-radius: 8px;
+  padding: 8px 10px;
+  margin: 6px 0;
+  overflow-x: auto;
+}
+.msg-body pre code { background: none; padding: 0; }
+
 /* The "Apollo is thinking" indicator */
 .msg.thinking .dots::after {
   content: "…";

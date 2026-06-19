@@ -52,6 +52,30 @@ function pulseOnce() {
 // ===========================================================================
 // CHAT — rendering messages
 // ===========================================================================
+function escapeHtml(s) {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+// Lightweight, SAFE Markdown -> HTML for the chat (HTML is escaped first). Turns
+// **style.css** into bold instead of showing literal asterisks, handles `code`,
+// bullets, headings, and links — so the chat reads clean.
+function renderMarkdown(text) {
+  let t = escapeHtml(text);
+  t = t.replace(/```([\s\S]*?)```/g, (m, c) => "<pre><code>" + c.replace(/^\n+|\n+$/g, "") + "</code></pre>");
+  t = t.replace(/`([^`]+)`/g, "<code>$1</code>");
+  t = t.replace(/^\s{0,3}#{1,6}\s*(.+)$/gm, "<strong>$1</strong>");
+  t = t.replace(/^\s*[-*+]\s+/gm, "• ");
+  t = t.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
+  t = t.replace(/__([^_]+)__/g, "<strong>$1</strong>");
+  t = t.replace(/\*([^*\n]+)\*/g, "<em>$1</em>");
+  t = t.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+  t = t.replace(/\n/g, "<br>");
+  return t;
+}
+
 function addMessage(role, text) {
   const wrap = document.createElement("div");
   wrap.className = `msg ${role}`;
@@ -62,8 +86,10 @@ function addMessage(role, text) {
     who.textContent = "Apollo";
     wrap.appendChild(who);
   }
-  const body = document.createElement("span");
-  body.textContent = text;
+  const body = document.createElement("div");
+  body.className = "msg-body";
+  if (role === "assistant") body.innerHTML = renderMarkdown(text);
+  else body.textContent = text;
   wrap.appendChild(body);
   els.messages.appendChild(wrap);
   els.messages.scrollTop = els.messages.scrollHeight;

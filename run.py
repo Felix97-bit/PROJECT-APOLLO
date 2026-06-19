@@ -80,9 +80,11 @@ def _open_window():
 
     browser = _find_browser()
     if browser:
-        # --app= launches a borderless window with no tabs/address bar.
-        subprocess.Popen([browser, f"--app={URL}"])
-        print(f"[Apollo] Opened in a standalone window. (If it didn't appear, visit {URL})")
+        # --app= launches a standalone window (no tabs/address bar); --start-fullscreen
+        # removes the title bar too, so Apollo fills the whole screen. (Press F11 to
+        # toggle out of fullscreen, or Alt+F4 to close.)
+        subprocess.Popen([browser, f"--app={URL}", "--start-fullscreen"])
+        print(f"[Apollo] Opened fullscreen. (If it didn't appear, visit {URL})")
     else:
         # No Chrome/Edge found: fall back to the default browser.
         import webbrowser
