@@ -296,27 +296,31 @@ def _text_of(response):
     return "".join(parts).strip()
 
 
-def _build_system(brain, facts, relevant):
-    """Assemble Apollo's system prompt: persona + the knowledge-base brain +
-    long-term facts + any older messages the keyword search pulled up."""
-    parts = [_load_system_prompt()]
-
+def _stable_system(brain):
+    """The STABLE half of the system prompt (persona + brain). Identical on every
+    message, so it can be prompt-cached."""
+    text = _load_system_prompt()
     if brain:
-        parts.append(
+        text += (
             "\n\n=== YOUR KNOWLEDGE OF FELIX (your brain — durable, always true "
             "unless he updates it) ===\n" + brain
         )
+    return text
 
+
+def _volatile_system(facts, relevant):
+    """The VOLATILE half (facts + retrieved context) — changes per message, so it
+    is kept OUT of the cached prefix and never invalidates the cache."""
+    parts = []
     if facts:
         parts.append(
-            "\n\n=== LONG-TERM MEMORY — durable facts about Felix and work you've "
-            "done. Treat these as things you already know. ==="
+            "=== LONG-TERM MEMORY — durable facts about Felix and work you've done. "
+            "Treat these as things you already know. ==="
         )
         parts.extend(f"- {f}" for f in facts)
-
     if relevant:
         parts.append(
-            "\n\n=== EARLIER MESSAGES (retrieved from older history by keyword search; "
+            "\n=== EARLIER MESSAGES (retrieved from older history by keyword search; "
             "they're outside the recent conversation and MAY be relevant — use them "
             "only if they actually help answer Felix). ==="
         )
@@ -326,8 +330,24 @@ def _build_system(brain, facts, relevant):
             if len(snippet) > 300:
                 snippet = snippet[:300] + "…"
             parts.append(f"- {who}: {snippet}")
-
     return "\n".join(parts)
+
+
+def _system_blocks(brain, facts, relevant):
+    """Build the system prompt as blocks for PROMPT CACHING: a stable block
+    (persona + brain — which, with the tool definitions, is the bulk of every
+    request) marked cacheable, then a volatile block (facts + retrieved context)
+    that isn't cached. This cuts the cost of the repeated content ~90% and changes
+    NOTHING about Apollo's behavior — the model receives the same content."""
+    blocks = [{
+        "type": "text",
+        "text": _stable_system(brain),
+        "cache_control": {"type": "ephemeral"},
+    }]
+    volatile = _volatile_system(facts, relevant)
+    if volatile:
+        blocks.append({"type": "text", "text": volatile})
+    return blocks
 
 
 def get_reply(user_message):
@@ -361,7 +381,7 @@ def get_reply(user_message):
         print(f"[Apollo] memory search error: {error}")
         relevant = []
 
-    system = _build_system(brain, facts, relevant)
+    system = _system_blocks(brain, facts, relevant)
     messages = history + [{"role": "user", "content": user_message}]
     tools = _tools()
 
