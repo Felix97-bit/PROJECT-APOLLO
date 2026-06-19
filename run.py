@@ -132,10 +132,6 @@ def _free_port(port):
 
 def main():
     memory.init_db()
-    # Fresh chat on every launch: wipe the conversation history so each time you
-    # open Apollo you start clean. (Your facts/workflows and the brain are kept —
-    # only the back-and-forth chat is cleared.)
-    memory.clear_all()
     _free_port(config.PORT)
     print("Apollo is starting…")
     print(f"  Local address: {URL}")
