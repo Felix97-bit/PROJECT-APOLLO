@@ -85,6 +85,9 @@ body {
   align-items: center;
   gap: 18px;
   z-index: 1;
+  /* Scale the whole centerpiece (compass + glow + wordmark) up so it commands
+     more of the screen. */
+  transform: scale(1.35);
 }
 
 .compass-wrap {
