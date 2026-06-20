@@ -540,6 +540,32 @@ function startStarfield() {
       pts: [[0.22, 0.08], [0.12, 0.42], [0.55, 0.5], [0.6, 0.9], [0.18, 0.82]],
       edges: [[0, 1], [0, 2], [1, 2], [2, 3], [3, 4], [4, 1]],
     },
+    { // Orion — the hunter, with belt + a faint sketch of the warrior
+      mul: 1.3,
+      pts: [
+        [0.46, 0.05], // 0 head (Meissa)
+        [0.30, 0.18], // 1 Betelgeuse (left shoulder)
+        [0.62, 0.15], // 2 Bellatrix (right shoulder)
+        [0.40, 0.50], // 3 belt left (Alnitak)
+        [0.46, 0.52], // 4 belt mid (Alnilam)
+        [0.52, 0.54], // 5 belt right (Mintaka)
+        [0.34, 0.86], // 6 Saiph (left foot)
+        [0.66, 0.88], // 7 Rigel (right foot)
+      ],
+      edges: [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5], [3, 6], [5, 7]],
+      figure: [
+        [[0.46, 0.005], [0.515, 0.03], [0.515, 0.085], [0.46, 0.11], [0.405, 0.085], [0.405, 0.03], [0.46, 0.005]], // helmet
+        [[0.46, 0.11], [0.46, 0.5]],                                  // spine
+        [[0.30, 0.18], [0.46, 0.14], [0.62, 0.15]],                   // shoulders
+        [[0.62, 0.15], [0.74, 0.05], [0.83, -0.03], [0.93, -0.14]],   // raised arm + club
+        [[0.30, 0.18], [0.18, 0.25], [0.10, 0.30]],                   // left arm
+        [[0.05, 0.06], [0.0, 0.22], [0.03, 0.40], [0.12, 0.48]],      // bow / shield arc
+        [[0.37, 0.49], [0.55, 0.55]],                                 // belt
+        [[0.46, 0.54], [0.45, 0.64], [0.47, 0.71]],                   // sword hanging from the belt
+        [[0.45, 0.5], [0.37, 0.69], [0.34, 0.86]],                    // left leg
+        [[0.47, 0.52], [0.58, 0.71], [0.66, 0.88]],                   // right leg
+      ],
+    },
   ];
   let constellations = [];
   function buildConstellations() {
@@ -552,18 +578,22 @@ function startStarfield() {
       { x: [0.32, 0.48], y: [0.70, 0.82] },   // bottom-center
       { x: [0.05, 0.22], y: [0.62, 0.76] },   // bottom-left
       { x: [0.02, 0.14], y: [0.46, 0.60] },   // left-lower
+      { x: [0.70, 0.78], y: [0.30, 0.40] },   // Orion (right — the feature, with the warrior)
     ];
     constellations = [];
     for (let k = 0; k < CON_TEMPLATES.length; k++) {
       const tpl = CON_TEMPLATES[k];
       const reg = regions[k % regions.length];
-      const scale = 165 + Math.random() * 85;
+      const scale = (165 + Math.random() * 85) * (tpl.mul || 1);
       const ox = (reg.x[0] + Math.random() * (reg.x[1] - reg.x[0])) * W;
       const oy = (reg.y[0] + Math.random() * (reg.y[1] - reg.y[0])) * H;
       const pts = tpl.pts.map((p) => ({
         x: ox + p[0] * scale, y: oy + p[1] * scale, ph: Math.random() * Math.PI * 2,
       }));
-      constellations.push({ pts, edges: tpl.edges });
+      const figure = tpl.figure
+        ? tpl.figure.map((stroke) => stroke.map((p) => ({ x: ox + p[0] * scale, y: oy + p[1] * scale })))
+        : null;
+      constellations.push({ pts, edges: tpl.edges, figure });
     }
   }
   buildConstellations();
@@ -580,6 +610,18 @@ function startStarfield() {
 
     // constellations — faint lines + gently twinkling anchor stars
     for (const con of constellations) {
+      ctx.globalAlpha = 1;
+      // faint figure sketch (e.g. Orion the warrior) drawn behind the stars
+      if (con.figure) {
+        ctx.strokeStyle = "rgba(205, 214, 240, 0.13)";
+        ctx.lineWidth = 1.1;
+        for (const stroke of con.figure) {
+          ctx.beginPath();
+          ctx.moveTo(stroke[0].x, stroke[0].y);
+          for (let q = 1; q < stroke.length; q++) ctx.lineTo(stroke[q].x, stroke[q].y);
+          ctx.stroke();
+        }
+      }
       ctx.strokeStyle = "rgba(185, 200, 235, 0.18)";
       ctx.lineWidth = 1;
       ctx.beginPath();

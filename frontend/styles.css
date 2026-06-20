@@ -441,10 +441,11 @@ body {
 .msg { max-width: 88%; line-height: 1.5; font-size: 0.94rem; }
 .msg .who {
   display: block;
-  font-size: 0.7rem;
-  letter-spacing: 0.08em;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: 0.09em;
   text-transform: uppercase;
-  margin-bottom: 3px;
+  margin-bottom: 5px;
   color: var(--text-secondary);
 }
 /* Apollo's messages: gold accent, left-aligned */
