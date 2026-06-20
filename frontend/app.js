@@ -544,20 +544,20 @@ function startStarfield() {
   let constellations = [];
   function buildConstellations() {
     const regions = [
-      { x: [0.37, 0.58], y: [0.02, 0.13] },   // top-center
-      { x: [0.70, 0.90], y: [0.05, 0.22] },   // top-right
-      { x: [0.79, 0.95], y: [0.32, 0.48] },   // right-upper
-      { x: [0.75, 0.93], y: [0.56, 0.72] },   // right-lower
-      { x: [0.55, 0.77], y: [0.79, 0.92] },   // bottom-right
-      { x: [0.33, 0.53], y: [0.80, 0.93] },   // bottom-center
-      { x: [0.07, 0.27], y: [0.73, 0.90] },   // bottom-left
-      { x: [0.02, 0.17], y: [0.54, 0.70] },   // left-lower
+      { x: [0.36, 0.52], y: [0.02, 0.11] },   // top-center
+      { x: [0.64, 0.78], y: [0.04, 0.16] },   // top-right
+      { x: [0.70, 0.83], y: [0.27, 0.40] },   // right-upper
+      { x: [0.66, 0.80], y: [0.50, 0.62] },   // right-lower
+      { x: [0.52, 0.70], y: [0.68, 0.80] },   // bottom-right
+      { x: [0.32, 0.48], y: [0.70, 0.82] },   // bottom-center
+      { x: [0.05, 0.22], y: [0.62, 0.76] },   // bottom-left
+      { x: [0.02, 0.14], y: [0.46, 0.60] },   // left-lower
     ];
     constellations = [];
     for (let k = 0; k < CON_TEMPLATES.length; k++) {
       const tpl = CON_TEMPLATES[k];
       const reg = regions[k % regions.length];
-      const scale = 90 + Math.random() * 55;
+      const scale = 165 + Math.random() * 85;
       const ox = (reg.x[0] + Math.random() * (reg.x[1] - reg.x[0])) * W;
       const oy = (reg.y[0] + Math.random() * (reg.y[1] - reg.y[0])) * H;
       const pts = tpl.pts.map((p) => ({
