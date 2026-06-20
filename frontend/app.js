@@ -433,25 +433,142 @@ function buildCompassDecoration() {
   }
 }
 
-function buildStars() {
-  const stars = document.getElementById("stars");
-  if (!stars) return;
-  const count = 26;
-  for (let i = 0; i < count; i++) {
-    const s = document.createElement("div");
-    s.className = "star";
-    const size = 1 + Math.random() * 2.5;
-    s.style.width = `${size}px`;
-    s.style.height = `${size}px`;
-    // Bias toward the edges so the luminous center stays clean
-    let x = Math.random(), y = Math.random();
-    if (x > 0.3 && x < 0.7) x = x < 0.5 ? x - 0.28 : x + 0.28;
-    if (y > 0.3 && y < 0.7) y = y < 0.5 ? y - 0.24 : y + 0.24;
-    s.style.left = `${x * 100}%`;
-    s.style.top = `${y * 100}%`;
-    s.style.opacity = `${0.08 + Math.random() * 0.16}`;
-    stars.appendChild(s);
+function startStarfield() {
+  const canvas = document.getElementById("starfield");
+  if (!canvas) return;
+  const ctx = canvas.getContext("2d");
+  let W = 0, H = 0;
+
+  function resize() {
+    const dpr = window.devicePixelRatio || 1;
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + "px";
+    canvas.style.height = H + "px";
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
+  resize();
+  window.addEventListener("resize", resize);
+
+  // A soft white glow sprite, pre-rendered once and stamped many times (cheap).
+  const glow = document.createElement("canvas");
+  glow.width = glow.height = 64;
+  (function () {
+    const g = glow.getContext("2d");
+    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, "rgba(255,255,255,1)");
+    grd.addColorStop(0.28, "rgba(255,255,255,0.5)");
+    grd.addColorStop(1, "rgba(255,255,255,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 64);
+  })();
+
+  // ---- Stars: tiny white dots that fade in, drift slowly, fade out (~15s) ----
+  const STAR_LIFE = 15000;
+  function starTarget() { return Math.min(170, Math.round((W * H) / 15000)); }
+  const stars = [];
+  function spawnStar(staggered) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * 5; // px/sec — very slow
+    stars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      size: 1 + Math.random() * 1.8,     // super tiny
+      life: STAR_LIFE * (0.75 + Math.random() * 0.6),
+      age: staggered ? Math.random() * STAR_LIFE : 0,
+      maxA: 0.55 + Math.random() * 0.45,
+    });
+  }
+  for (let i = 0; i < starTarget(); i++) spawnStar(true);
+
+  // ---- Comets: occasional, faster, white head + fading rainbow trail ----
+  const comets = [];
+  let nextComet = 5000 + Math.random() * 9000;
+  function spawnComet() {
+    const angle = Math.PI / 2 + (Math.random() - 0.5) * 1.4; // mostly downward, varied
+    const speed = 230 + Math.random() * 170;                 // px/sec — faster, not too fast
+    comets.push({
+      x: Math.random() * W,
+      y: -30,
+      vx: Math.cos(angle) * speed,
+      vy: Math.sin(angle) * speed,
+      hist: [],
+      hue: Math.random() * 360,
+      size: 2.5 + Math.random() * 2,
+    });
+  }
+
+  let last = performance.now();
+  function frame(now) {
+    const dt = Math.min(60, now - last);
+    last = now;
+    const dts = dt / 1000;
+    ctx.clearRect(0, 0, W, H);
+    ctx.globalCompositeOperation = "lighter";
+
+    // stars
+    while (stars.length < starTarget()) spawnStar(false);
+    for (let i = stars.length - 1; i >= 0; i--) {
+      const s = stars[i];
+      s.age += dt;
+      if (s.age >= s.life) { stars.splice(i, 1); continue; }
+      s.x += s.vx * dts; s.y += s.vy * dts;
+      if (s.x < -12) s.x = W + 12; else if (s.x > W + 12) s.x = -12;
+      if (s.y < -12) s.y = H + 12; else if (s.y > H + 12) s.y = -12;
+      const t = s.age / s.life;
+      const fade = t < 0.18 ? t / 0.18 : (t > 0.82 ? (1 - t) / 0.18 : 1);
+      ctx.globalAlpha = fade * s.maxA;
+      const d = s.size * 5;
+      ctx.drawImage(glow, s.x - d / 2, s.y - d / 2, d, d);
+    }
+
+    // comets
+    nextComet -= dt;
+    if (nextComet <= 0) { spawnComet(); nextComet = 7000 + Math.random() * 13000; }
+    for (let i = comets.length - 1; i >= 0; i--) {
+      const c = comets[i];
+      c.x += c.vx * dts; c.y += c.vy * dts;
+      const onScreen = c.x > -60 && c.x < W + 60 && c.y > -60 && c.y < H + 60;
+      if (onScreen) {
+        c.hist.push({ x: c.x, y: c.y });
+        if (c.hist.length > 30) c.hist.shift();
+      } else if (c.hist.length) {
+        c.hist.shift(); // trail shrinks out behind it; never fills the screen
+      }
+      if (!c.hist.length) { comets.splice(i, 1); continue; }
+
+      const n = c.hist.length;
+      for (let j = 1; j < n; j++) {
+        const p0 = c.hist[j - 1], p1 = c.hist[j];
+        const frac = j / n; // 0 at tail, 1 at head
+        ctx.strokeStyle = `hsla(${(c.hue + j * 14) % 360}, 100%, 62%, ${frac * frac * 0.85})`;
+        ctx.lineWidth = frac * c.size * 2.4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.moveTo(p0.x, p0.y);
+        ctx.lineTo(p1.x, p1.y);
+        ctx.stroke();
+      }
+      if (onScreen) {
+        ctx.globalAlpha = 1;
+        const hd = c.size * 9;
+        ctx.drawImage(glow, c.x - hd / 2, c.y - hd / 2, hd, hd);
+        ctx.fillStyle = "rgba(255,255,255,0.95)"; // bright core (structure)
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.size * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    ctx.globalCompositeOperation = "source-over";
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
 }
 
 // ===========================================================================
@@ -467,6 +584,6 @@ els.chatRestore.addEventListener("click", restoreChat);
 
 renderMuteButton();
 buildCompassDecoration();
-buildStars();
+startStarfield();
 loadHistory();
 els.input.focus();

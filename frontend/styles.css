@@ -66,13 +66,14 @@ body {
   overflow: hidden;
 }
 
-/* Faint gold stars scattered in the corners */
-.stars { position: absolute; inset: 0; pointer-events: none; }
-.stars .star {
-  position: absolute;
-  background: var(--gold);
-  border-radius: 50%;
-  opacity: 0.18;
+/* Animated starfield + comets canvas — sits behind all the content */
+#starfield {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
 }
 
 /* ===========================================================================
