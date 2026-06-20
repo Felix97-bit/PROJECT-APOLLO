@@ -466,7 +466,22 @@ function startStarfield() {
     gx.fillRect(0, 0, 64, 64);
     return c;
   }
-  const glowStar = makeGlow(250, 232, 180);  // light champagne — clean glow, not muddy
+  // Star sprite: bright near-white centre with a warm-gold ring. The ring is what
+  // makes the light centre visible against the cream background (light-on-light alone
+  // is invisible), while the centre keeps it looking like a clean point, not a stain.
+  const glowStar = (function () {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const g = c.getContext("2d");
+    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0.0, "rgba(255,253,245,1)");
+    grd.addColorStop(0.25, "rgba(244,210,130,0.9)");
+    grd.addColorStop(0.55, "rgba(223,178,88,0.45)");
+    grd.addColorStop(1.0, "rgba(223,178,88,0)");
+    g.fillStyle = grd;
+    g.fillRect(0, 0, 64, 64);
+    return c;
+  })();
   const glowWhite = makeGlow(255, 255, 255); // comet head
 
   // ---- Stars: tiny white dots that fade in, drift slowly, fade out (~15s) ----
@@ -526,15 +541,15 @@ function startStarfield() {
       const t = s.age / s.life;
       const fade = t < 0.18 ? t / 0.18 : (t > 0.82 ? (1 - t) / 0.18 : 1);
       const a = fade * s.maxA;
-      // tight soft glow halo
-      ctx.globalAlpha = a * 0.5;
-      const d = s.size * 4;
-      ctx.drawImage(glowStar, s.x - d / 2, s.y - d / 2, d, d);
-      // crisp bright core — a clean point of light, not a smudge
+      // white-centred, gold-ringed glow (the ring provides the contrast)
       ctx.globalAlpha = a;
-      ctx.fillStyle = "rgb(255, 250, 234)";
+      const d = s.size * 5.5;
+      ctx.drawImage(glowStar, s.x - d / 2, s.y - d / 2, d, d);
+      // crisp bright core point
+      ctx.globalAlpha = Math.min(1, a + 0.15);
+      ctx.fillStyle = "rgb(255, 252, 242)";
       ctx.beginPath();
-      ctx.arc(s.x, s.y, s.size * 0.7, 0, Math.PI * 2);
+      ctx.arc(s.x, s.y, s.size * 0.5, 0, Math.PI * 2);
       ctx.fill();
     }
 
