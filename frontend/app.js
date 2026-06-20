@@ -466,22 +466,7 @@ function startStarfield() {
     gx.fillRect(0, 0, 64, 64);
     return c;
   }
-  // Star sprite: bright near-white centre with a warm-gold ring. The ring is what
-  // makes the light centre visible against the cream background (light-on-light alone
-  // is invisible), while the centre keeps it looking like a clean point, not a stain.
-  const glowStar = (function () {
-    const c = document.createElement("canvas");
-    c.width = c.height = 64;
-    const g = c.getContext("2d");
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0.0, "rgba(255,253,245,1)");
-    grd.addColorStop(0.25, "rgba(244,210,130,0.9)");
-    grd.addColorStop(0.55, "rgba(223,178,88,0.45)");
-    grd.addColorStop(1.0, "rgba(223,178,88,0)");
-    g.fillStyle = grd;
-    g.fillRect(0, 0, 64, 64);
-    return c;
-  })();
+  const glowStar = makeGlow(255, 255, 255);  // clean white starlight (pops on the black sky)
   const glowWhite = makeGlow(255, 255, 255); // comet head
 
   // ---- Stars: tiny white dots that fade in, drift slowly, fade out (~15s) ----
@@ -528,8 +513,8 @@ function startStarfield() {
     const dts = dt / 1000;
     ctx.clearRect(0, 0, W, H);
 
-    // stars — normal blend so the warm gold shows on the light background
-    ctx.globalCompositeOperation = "source-over";
+    // stars — additive white glow on the black sky
+    ctx.globalCompositeOperation = "lighter";
     while (stars.length < starTarget()) spawnStar(false);
     for (let i = stars.length - 1; i >= 0; i--) {
       const s = stars[i];

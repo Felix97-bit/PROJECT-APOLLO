@@ -4,9 +4,9 @@
 
 :root {
   /* Backgrounds */
-  --bg-main:        #FAF8F2;   /* warm white, not stark */
-  --bg-glow-center: #FFFFFF;   /* subtle radial highlight behind the compass */
-  --bg-glow-edge:   #F3EEE2;
+  --bg-main:        #05060a;   /* deep space black */
+  --bg-glow-center: #11131f;   /* subtle dark lift behind the compass */
+  --bg-glow-edge:   #000000;
 
   /* Gold palette */
   --gold-light:     #F4E5B8;
@@ -16,11 +16,11 @@
   --gold-accent:    #B8902E;
 
   /* Text */
-  --text-primary:   #2A2620;
-  --text-secondary: #6B6356;
+  --text-primary:   #F2EFE6;
+  --text-secondary: #A29C8E;
 
   /* Surfaces */
-  --surface:        rgba(255, 255, 255, 0.72);
+  --surface:        rgba(22, 24, 34, 0.55);
   --surface-border: rgba(212, 175, 55, 0.28);
 
   /* =========================================================================
