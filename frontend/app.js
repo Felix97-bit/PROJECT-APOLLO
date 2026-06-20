@@ -452,18 +452,22 @@ function startStarfield() {
   resize();
   window.addEventListener("resize", resize);
 
-  // A soft white glow sprite, pre-rendered once and stamped many times (cheap).
-  const glow = document.createElement("canvas");
-  glow.width = glow.height = 64;
-  (function () {
-    const g = glow.getContext("2d");
-    const grd = g.createRadialGradient(32, 32, 0, 32, 32, 32);
-    grd.addColorStop(0, "rgba(255,255,255,1)");
-    grd.addColorStop(0.28, "rgba(255,255,255,0.5)");
-    grd.addColorStop(1, "rgba(255,255,255,0)");
-    g.fillStyle = grd;
-    g.fillRect(0, 0, 64, 64);
-  })();
+  // Pre-rendered glow sprites, stamped many times (cheap). Stars are a warm gold
+  // so they're actually visible on the light cream background; comet heads stay white.
+  function makeGlow(r, g, b) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const gx = c.getContext("2d");
+    const grd = gx.createRadialGradient(32, 32, 0, 32, 32, 32);
+    grd.addColorStop(0, `rgba(${r},${g},${b},1)`);
+    grd.addColorStop(0.32, `rgba(${r},${g},${b},0.55)`);
+    grd.addColorStop(1, `rgba(${r},${g},${b},0)`);
+    gx.fillStyle = grd;
+    gx.fillRect(0, 0, 64, 64);
+    return c;
+  }
+  const glowStar = makeGlow(228, 178, 66);   // warm gold — visible on the light theme
+  const glowWhite = makeGlow(255, 255, 255); // comet head
 
   // ---- Stars: tiny white dots that fade in, drift slowly, fade out (~15s) ----
   const STAR_LIFE = 15000;
@@ -477,10 +481,10 @@ function startStarfield() {
       y: Math.random() * H,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
-      size: 1 + Math.random() * 1.8,     // super tiny
+      size: 1.3 + Math.random() * 2,     // tiny, but visible
       life: STAR_LIFE * (0.75 + Math.random() * 0.6),
       age: staggered ? Math.random() * STAR_LIFE : 0,
-      maxA: 0.55 + Math.random() * 0.45,
+      maxA: 0.7 + Math.random() * 0.3,
     });
   }
   for (let i = 0; i < starTarget(); i++) spawnStar(true);
@@ -508,9 +512,9 @@ function startStarfield() {
     last = now;
     const dts = dt / 1000;
     ctx.clearRect(0, 0, W, H);
-    ctx.globalCompositeOperation = "lighter";
 
-    // stars
+    // stars — normal blend so the warm gold shows on the light background
+    ctx.globalCompositeOperation = "source-over";
     while (stars.length < starTarget()) spawnStar(false);
     for (let i = stars.length - 1; i >= 0; i--) {
       const s = stars[i];
@@ -522,11 +526,12 @@ function startStarfield() {
       const t = s.age / s.life;
       const fade = t < 0.18 ? t / 0.18 : (t > 0.82 ? (1 - t) / 0.18 : 1);
       ctx.globalAlpha = fade * s.maxA;
-      const d = s.size * 5;
-      ctx.drawImage(glow, s.x - d / 2, s.y - d / 2, d, d);
+      const d = s.size * 6;
+      ctx.drawImage(glowStar, s.x - d / 2, s.y - d / 2, d, d);
     }
 
-    // comets
+    // comets — additive glow
+    ctx.globalCompositeOperation = "lighter";
     nextComet -= dt;
     if (nextComet <= 0) { spawnComet(); nextComet = 7000 + Math.random() * 13000; }
     for (let i = comets.length - 1; i >= 0; i--) {
@@ -556,7 +561,7 @@ function startStarfield() {
       if (onScreen) {
         ctx.globalAlpha = 1;
         const hd = c.size * 9;
-        ctx.drawImage(glow, c.x - hd / 2, c.y - hd / 2, hd, hd);
+        ctx.drawImage(glowWhite, c.x - hd / 2, c.y - hd / 2, hd, hd);
         ctx.fillStyle = "rgba(255,255,255,0.95)"; // bright core (structure)
         ctx.beginPath();
         ctx.arc(c.x, c.y, c.size * 0.9, 0, Math.PI * 2);
