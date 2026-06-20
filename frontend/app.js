@@ -466,7 +466,7 @@ function startStarfield() {
     gx.fillRect(0, 0, 64, 64);
     return c;
   }
-  const glowStar = makeGlow(228, 178, 66);   // warm gold — visible on the light theme
+  const glowStar = makeGlow(250, 232, 180);  // light champagne — clean glow, not muddy
   const glowWhite = makeGlow(255, 255, 255); // comet head
 
   // ---- Stars: tiny white dots that fade in, drift slowly, fade out (~15s) ----
@@ -525,9 +525,17 @@ function startStarfield() {
       if (s.y < -12) s.y = H + 12; else if (s.y > H + 12) s.y = -12;
       const t = s.age / s.life;
       const fade = t < 0.18 ? t / 0.18 : (t > 0.82 ? (1 - t) / 0.18 : 1);
-      ctx.globalAlpha = fade * s.maxA;
-      const d = s.size * 6;
+      const a = fade * s.maxA;
+      // tight soft glow halo
+      ctx.globalAlpha = a * 0.5;
+      const d = s.size * 4;
       ctx.drawImage(glowStar, s.x - d / 2, s.y - d / 2, d, d);
+      // crisp bright core — a clean point of light, not a smudge
+      ctx.globalAlpha = a;
+      ctx.fillStyle = "rgb(255, 250, 234)";
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.size * 0.7, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     // comets — additive glow
