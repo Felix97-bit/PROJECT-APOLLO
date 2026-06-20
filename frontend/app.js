@@ -506,6 +506,49 @@ function startStarfield() {
     });
   }
 
+  // ---- Constellations: faint patterns that blend in with the stars ----
+  const CON_TEMPLATES = [
+    { // Big Dipper
+      pts: [[0, 0.35], [0, 0.62], [0.30, 0.66], [0.33, 0.40], [0.56, 0.30], [0.80, 0.18], [1.0, 0.08]],
+      edges: [[0, 1], [1, 2], [2, 3], [3, 0], [3, 4], [4, 5], [5, 6]],
+    },
+    { // Orion (simplified)
+      pts: [[0.2, 0.08], [0.82, 0.04], [0.42, 0.5], [0.5, 0.53], [0.58, 0.56], [0.26, 0.96], [0.8, 0.95]],
+      edges: [[0, 2], [1, 4], [2, 3], [3, 4], [2, 5], [4, 6]],
+    },
+    { // Cassiopeia (W)
+      pts: [[0, 0.2], [0.25, 0.62], [0.5, 0.2], [0.75, 0.66], [1, 0.24]],
+      edges: [[0, 1], [1, 2], [2, 3], [3, 4]],
+    },
+    { // Triangle
+      pts: [[0.1, 0.12], [0.92, 0.32], [0.46, 0.96]],
+      edges: [[0, 1], [1, 2], [2, 0]],
+    },
+  ];
+  let constellations = [];
+  function buildConstellations() {
+    const regions = [
+      { x: [0.04, 0.30], y: [0.06, 0.32] },
+      { x: [0.66, 0.93], y: [0.06, 0.32] },
+      { x: [0.05, 0.32], y: [0.62, 0.90] },
+      { x: [0.62, 0.92], y: [0.60, 0.88] },
+    ];
+    constellations = [];
+    for (let k = 0; k < CON_TEMPLATES.length; k++) {
+      const tpl = CON_TEMPLATES[k];
+      const reg = regions[k % regions.length];
+      const scale = 120 + Math.random() * 110;
+      const ox = (reg.x[0] + Math.random() * (reg.x[1] - reg.x[0])) * W;
+      const oy = (reg.y[0] + Math.random() * (reg.y[1] - reg.y[0])) * H;
+      const pts = tpl.pts.map((p) => ({
+        x: ox + p[0] * scale, y: oy + p[1] * scale, ph: Math.random() * Math.PI * 2,
+      }));
+      constellations.push({ pts, edges: tpl.edges });
+    }
+  }
+  buildConstellations();
+  window.addEventListener("resize", buildConstellations);
+
   let last = performance.now();
   function frame(now) {
     const dt = Math.min(60, now - last);
@@ -513,8 +556,32 @@ function startStarfield() {
     const dts = dt / 1000;
     ctx.clearRect(0, 0, W, H);
 
-    // stars — additive white glow on the black sky
     ctx.globalCompositeOperation = "lighter";
+
+    // constellations — faint lines + gently twinkling anchor stars
+    for (const con of constellations) {
+      ctx.strokeStyle = "rgba(185, 200, 235, 0.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const [i, j] of con.edges) {
+        ctx.moveTo(con.pts[i].x, con.pts[i].y);
+        ctx.lineTo(con.pts[j].x, con.pts[j].y);
+      }
+      ctx.stroke();
+      for (const p of con.pts) {
+        const tw = 0.65 + 0.35 * Math.sin(now / 950 + p.ph);
+        ctx.globalAlpha = tw;
+        ctx.drawImage(glowStar, p.x - 6, p.y - 6, 12, 12);
+        ctx.globalAlpha = Math.min(1, tw + 0.2);
+        ctx.fillStyle = "rgb(255,255,255)";
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+    ctx.globalAlpha = 1;
+
+    // stars — additive white glow on the black sky
     while (stars.length < starTarget()) spawnStar(false);
     for (let i = stars.length - 1; i >= 0; i--) {
       const s = stars[i];
