@@ -553,17 +553,57 @@ function startStarfield() {
         [0.66, 0.88], // 7 Rigel (right foot)
       ],
       edges: [[0, 1], [0, 2], [1, 3], [2, 5], [3, 4], [4, 5], [3, 6], [5, 7]],
+      // Detailed warrior line-art (SVG paths in the same 0..1 space as the
+      // stars, so it wraps Orion's anatomy). t: "main" = outline, "detail" = interior.
       figure: [
-        [[0.46, 0.005], [0.515, 0.03], [0.515, 0.085], [0.46, 0.11], [0.405, 0.085], [0.405, 0.03], [0.46, 0.005]], // helmet
-        [[0.46, 0.11], [0.46, 0.5]],                                  // spine
-        [[0.30, 0.18], [0.46, 0.14], [0.62, 0.15]],                   // shoulders
-        [[0.62, 0.15], [0.74, 0.05], [0.83, -0.03], [0.93, -0.14]],   // raised arm + club
-        [[0.30, 0.18], [0.18, 0.25], [0.10, 0.30]],                   // left arm
-        [[0.05, 0.06], [0.0, 0.22], [0.03, 0.40], [0.12, 0.48]],      // bow / shield arc
-        [[0.37, 0.49], [0.55, 0.55]],                                 // belt
-        [[0.46, 0.54], [0.45, 0.64], [0.47, 0.71]],                   // sword hanging from the belt
-        [[0.45, 0.5], [0.37, 0.69], [0.34, 0.86]],                    // left leg
-        [[0.47, 0.52], [0.58, 0.71], [0.66, 0.88]],                   // right leg
+        // — Crested Corinthian helmet —
+        { t: "main", d: "M 0.435 -0.018 C 0.42 -0.075 0.50 -0.10 0.575 -0.062 C 0.55 -0.045 0.52 -0.03 0.50 -0.012" },
+        { t: "main", d: "M 0.392 0.078 C 0.378 -0.005 0.405 -0.04 0.46 -0.04 C 0.515 -0.04 0.542 -0.005 0.528 0.078" },
+        { t: "main", d: "M 0.40 0.072 C 0.398 0.108 0.425 0.138 0.46 0.138 C 0.495 0.138 0.522 0.108 0.52 0.072" },
+        { t: "main", d: "M 0.388 0.075 L 0.532 0.075" },
+        { t: "main", d: "M 0.46 0.075 L 0.46 0.13" },
+        // — Shoulders + muscled cuirass torso —
+        { t: "main", d: "M 0.298 0.178 C 0.355 0.15 0.41 0.158 0.46 0.162 C 0.51 0.158 0.565 0.15 0.622 0.178" },
+        { t: "main", d: "M 0.622 0.178 C 0.61 0.27 0.575 0.36 0.55 0.42 C 0.535 0.46 0.525 0.49 0.518 0.515" },
+        { t: "main", d: "M 0.298 0.178 C 0.315 0.27 0.35 0.36 0.375 0.42 C 0.39 0.46 0.40 0.49 0.407 0.515" },
+        // — Belt (sits on Orion's three belt stars) —
+        { t: "main", d: "M 0.382 0.498 L 0.535 0.528" },
+        { t: "main", d: "M 0.378 0.52 L 0.532 0.55" },
+        // — Right arm raised with a sword —
+        { t: "main", d: "M 0.612 0.182 C 0.66 0.135 0.71 0.092 0.755 0.035" },
+        { t: "main", d: "M 0.752 0.04 L 0.84 -0.14" },
+        { t: "main", d: "M 0.715 0.012 L 0.80 0.058" },
+        // — Left arm + round hoplite shield —
+        { t: "main", d: "M 0.298 0.178 C 0.255 0.225 0.225 0.27 0.215 0.31" },
+        { t: "main", d: "M 0.05 0.36 A 0.15 0.15 0 1 0 0.35 0.36 A 0.15 0.15 0 1 0 0.05 0.36 Z" },
+        // — Legs (muscled, splayed to Rigel & Saiph) —
+        { t: "main", d: "M 0.535 0.55 C 0.575 0.63 0.59 0.685 0.588 0.712 C 0.595 0.785 0.63 0.84 0.665 0.876" },
+        { t: "main", d: "M 0.482 0.552 C 0.50 0.62 0.522 0.678 0.547 0.712 C 0.558 0.782 0.59 0.832 0.622 0.862" },
+        { t: "main", d: "M 0.402 0.552 C 0.362 0.625 0.345 0.682 0.346 0.705 C 0.336 0.775 0.33 0.828 0.336 0.862" },
+        { t: "main", d: "M 0.452 0.552 C 0.432 0.622 0.412 0.678 0.40 0.705 C 0.386 0.772 0.362 0.82 0.357 0.856" },
+        { t: "main", d: "M 0.31 0.872 L 0.372 0.872" },
+        { t: "main", d: "M 0.632 0.882 L 0.692 0.882" },
+        // — Detail: helmet crest comb, eye slits, neckline —
+        { t: "detail", d: "M 0.46 -0.07 L 0.475 -0.018 M 0.50 -0.078 L 0.505 -0.022 M 0.532 -0.062 L 0.523 -0.018" },
+        { t: "detail", d: "M 0.418 0.088 L 0.443 0.086 M 0.477 0.086 L 0.502 0.088" },
+        { t: "detail", d: "M 0.40 0.165 C 0.43 0.195 0.49 0.195 0.52 0.165" },
+        // — Detail: cuirass sternum + pectorals + abs —
+        { t: "detail", d: "M 0.46 0.165 L 0.46 0.40" },
+        { t: "detail", d: "M 0.405 0.225 C 0.43 0.258 0.49 0.258 0.515 0.225" },
+        { t: "detail", d: "M 0.418 0.31 C 0.44 0.328 0.48 0.328 0.505 0.31" },
+        { t: "detail", d: "M 0.422 0.36 C 0.44 0.375 0.48 0.375 0.50 0.36" },
+        { t: "detail", d: "M 0.425 0.41 C 0.44 0.422 0.478 0.422 0.495 0.41" },
+        // — Detail: shield rings, boss + Spartan lambda —
+        { t: "detail", d: "M 0.08 0.36 A 0.12 0.12 0 1 0 0.32 0.36 A 0.12 0.12 0 1 0 0.08 0.36 Z" },
+        { t: "detail", d: "M 0.11 0.36 A 0.09 0.09 0 1 0 0.29 0.36 A 0.09 0.09 0 1 0 0.11 0.36 Z" },
+        { t: "detail", d: "M 0.17 0.36 A 0.03 0.03 0 1 0 0.23 0.36 A 0.03 0.03 0 1 0 0.17 0.36 Z" },
+        { t: "detail", d: "M 0.13 0.435 L 0.20 0.295 L 0.27 0.435" },
+        // — Detail: war skirt (pteruges) —
+        { t: "detail", d: "M 0.392 0.525 L 0.388 0.61 L 0.41 0.61 L 0.414 0.525 M 0.422 0.53 L 0.42 0.618 L 0.442 0.618 L 0.444 0.53 M 0.452 0.532 L 0.452 0.622 L 0.474 0.622 L 0.474 0.532 M 0.482 0.532 L 0.484 0.618 L 0.506 0.618 L 0.504 0.532 M 0.512 0.528 L 0.516 0.61 L 0.536 0.608 L 0.532 0.528" },
+        // — Detail: greaves / knees + cape —
+        { t: "detail", d: "M 0.552 0.715 C 0.57 0.72 0.585 0.72 0.59 0.713 M 0.346 0.708 C 0.362 0.714 0.388 0.714 0.40 0.706" },
+        { t: "detail", d: "M 0.578 0.78 L 0.628 0.85 M 0.344 0.78 L 0.352 0.85" },
+        { t: "detail", d: "M 0.625 0.185 C 0.73 0.33 0.71 0.59 0.60 0.745" },
       ],
     },
   ];
@@ -590,10 +630,12 @@ function startStarfield() {
       const pts = tpl.pts.map((p) => ({
         x: ox + p[0] * scale, y: oy + p[1] * scale, ph: Math.random() * Math.PI * 2,
       }));
-      const figure = tpl.figure
-        ? tpl.figure.map((stroke) => stroke.map((p) => ({ x: ox + p[0] * scale, y: oy + p[1] * scale })))
-        : null;
-      constellations.push({ pts, edges: tpl.edges, figure });
+      // Parse the warrior's SVG line-art once per template (it's in normalized
+      // 0..1 space, so it's placement-independent and reusable).
+      if (tpl.figure && !tpl._fig) {
+        tpl._fig = tpl.figure.map((f) => ({ path: new Path2D(f.d), t: f.t }));
+      }
+      constellations.push({ pts, edges: tpl.edges, figure: tpl._fig || null, ox, oy, scale });
     }
   }
   buildConstellations();
@@ -611,16 +653,25 @@ function startStarfield() {
     // constellations — faint lines + gently twinkling anchor stars
     for (const con of constellations) {
       ctx.globalAlpha = 1;
-      // faint figure sketch (e.g. Orion the warrior) drawn behind the stars
+      // detailed figure line-art (Orion the warrior) drawn behind the stars,
+      // via a scaled transform so the bezier curves stay smooth
       if (con.figure) {
-        ctx.strokeStyle = "rgba(205, 214, 240, 0.13)";
-        ctx.lineWidth = 1.1;
-        for (const stroke of con.figure) {
-          ctx.beginPath();
-          ctx.moveTo(stroke[0].x, stroke[0].y);
-          for (let q = 1; q < stroke.length; q++) ctx.lineTo(stroke[q].x, stroke[q].y);
-          ctx.stroke();
+        ctx.save();
+        ctx.translate(con.ox, con.oy);
+        ctx.scale(con.scale, con.scale);
+        ctx.lineJoin = "round";
+        ctx.lineCap = "round";
+        for (const fp of con.figure) {
+          if (fp.t === "main") {
+            ctx.strokeStyle = "rgba(212, 222, 248, 0.24)";
+            ctx.lineWidth = 1.5 / con.scale;
+          } else {
+            ctx.strokeStyle = "rgba(190, 205, 236, 0.13)";
+            ctx.lineWidth = 1.0 / con.scale;
+          }
+          ctx.stroke(fp.path);
         }
+        ctx.restore();
       }
       ctx.strokeStyle = "rgba(185, 200, 235, 0.18)";
       ctx.lineWidth = 1;
