@@ -3,10 +3,14 @@
    =========================================================================== */
 
 :root {
-  /* Backgrounds */
-  --bg-main:        #05060a;   /* deep space black */
-  --bg-glow-center: #11131f;   /* subtle dark lift behind the compass */
-  --bg-glow-edge:   #000000;
+  /* Backgrounds — an aged book page */
+  --paper:          #ece0c2;   /* warm cream base of the page                  */
+  --paper-light:    #f4ebd4;   /* lighter cream (centre, where light falls)    */
+  --paper-shade:    #d8c49a;   /* toned cream for the aged, darker edges       */
+  --ink-edge:       rgba(94, 68, 32, 0.30);  /* brown "worn edge" darkening    */
+  --foxing:         rgba(120, 88, 46, 0.10); /* age-spot / foxing stain colour */
+  --page-rule:      rgba(120, 90, 45, 0.42); /* faint ruled-border ink         */
+  --bg-main:        var(--paper);
 
   /* Gold palette */
   --gold-light:     #F4E5B8;
@@ -15,9 +19,9 @@
   --gold-glow:      #FFD75E;
   --gold-accent:    #B8902E;
 
-  /* Text */
-  --text-primary:   #F2EFE6;
-  --text-secondary: #A29C8E;
+  /* Text — dark ink for legibility on the cream page */
+  --text-primary:   #33261a;
+  --text-secondary: #7a6647;
 
   /* Surfaces */
   --surface:        rgba(22, 24, 34, 0.55);
@@ -52,28 +56,48 @@ body {
   overflow: hidden;
 }
 
-/* ---- The stage: full window with a luminous center ---- */
+/* ---- The stage: a page from an old book ----------------------------------
+   Layered top-to-bottom: a fine paper grain (SVG noise) for wear, scattered
+   foxing/age spots, a soft worn-edge vignette, then the warm cream paper wash
+   with a little more light through the centre. All pure CSS — no images. */
 .stage {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background:
-    radial-gradient(circle at 50% 48%,
-      var(--bg-glow-center) 0%,
-      var(--bg-glow-edge) 70%);
+  background-color: var(--paper);
+  background-image:
+    /* subtle paper grain / fibre — the "wear and tear" texture */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E"),
+    /* scattered foxing / age spots */
+    radial-gradient(circle at 17% 24%, var(--foxing) 0%, transparent 6%),
+    radial-gradient(circle at 83% 19%, var(--foxing) 0%, transparent 5%),
+    radial-gradient(circle at 27% 77%, var(--foxing) 0%, transparent 7%),
+    radial-gradient(circle at 75% 83%, var(--foxing) 0%, transparent 5%),
+    radial-gradient(circle at 62% 44%, var(--foxing) 0%, transparent 4%),
+    radial-gradient(circle at 40% 12%, var(--foxing) 0%, transparent 4%),
+    /* soft worn, darkened edges (age vignette) */
+    radial-gradient(ellipse 118% 118% at 50% 50%,
+      transparent 52%, var(--ink-edge) 100%),
+    /* warm cream page wash — brighter in the middle where light falls */
+    radial-gradient(ellipse 90% 90% at 50% 46%,
+      var(--paper-light) 0%, var(--paper) 58%, var(--paper-shade) 100%);
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-/* Animated starfield + comets canvas — sits behind all the content */
-#starfield {
-  position: fixed;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+/* Minimal design: a faint double ruled border framing the page, like an old
+   book plate. Purely decorative and click-through. */
+.stage::before {
+  content: "";
+  position: absolute;
+  inset: 26px;
   z-index: 0;
   pointer-events: none;
+  box-shadow:
+    inset 0 0 0 1px var(--page-rule),   /* outer rule                    */
+    inset 0 0 0 4px transparent,        /* the gap between the two rules */
+    inset 0 0 0 5px var(--page-rule);   /* inner rule                    */
 }
 
 /* ===========================================================================
