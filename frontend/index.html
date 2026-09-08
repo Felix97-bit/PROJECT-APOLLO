@@ -13,7 +13,18 @@
   <link rel="stylesheet" href="/static/styles.css" />
 </head>
 <body>
-  <!-- The full-window stage: an aged cream book page -->
+  <!-- Hidden SVG filter that frays the page's edges into a ripped, tattered
+       edge (used by .stage::before in styles.css). Not visible itself. -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <filter id="torn-edge">
+      <feTurbulence type="fractalNoise" baseFrequency="0.014 0.016"
+                    numOctaves="4" seed="8" result="noise" />
+      <feDisplacementMap in="SourceGraphic" in2="noise" scale="20"
+                         xChannelSelector="R" yChannelSelector="G" />
+    </filter>
+  </svg>
+
+  <!-- The full-window stage: a torn old-book page on a dark surface -->
   <main class="stage">
 
     <!-- ============ CENTERPIECE: the golden compass ============ -->

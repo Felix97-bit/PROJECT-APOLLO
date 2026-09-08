@@ -7,10 +7,9 @@
   --paper:          #ece0c2;   /* warm cream base of the page                  */
   --paper-light:    #f4ebd4;   /* lighter cream (centre, where light falls)    */
   --paper-shade:    #d8c49a;   /* toned cream for the aged, darker edges       */
-  --ink-edge:       rgba(88, 62, 28, 0.42);  /* brown "worn edge" darkening    */
-  --foxing:         rgba(116, 82, 40, 0.15); /* age-spot / foxing stain colour */
-  --foxing-deep:    rgba(96, 66, 32, 0.20);  /* darker, more defined stains    */
-  --page-rule:      rgba(120, 90, 45, 0.42); /* faint ruled-border ink         */
+  --ink-edge:       rgba(88, 62, 28, 0.38);  /* brown "worn edge" darkening    */
+  --desk:           #241a10;   /* dark surface the torn page rests on          */
+  --desk-edge:      #180f08;   /* deeper shadow toward the corners             */
   --bg-main:        var(--paper);
 
   /* Gold palette */
@@ -57,53 +56,44 @@ body {
   overflow: hidden;
 }
 
-/* ---- The stage: a page from an old book ----------------------------------
-   Layered top-to-bottom: a fine paper grain (SVG noise) for wear, scattered
-   foxing/age spots, a soft worn-edge vignette, then the warm cream paper wash
-   with a little more light through the centre. All pure CSS — no images. */
+/* ---- The stage: a torn page from an old book on a dark surface ------------
+   .stage is the dark surface the page rests on; .stage::before is the cream
+   page itself, whose rectangular edges are frayed into a ripped, tattered
+   edge by the #torn-edge turbulence-displacement filter (defined in the HTML).
+   All pure CSS — no images. */
 .stage {
   position: relative;
   width: 100vw;
   height: 100vh;
-  background-color: var(--paper);
+  background-color: var(--desk);
   background-image:
-    /* paper grain / fibre — the "wear and tear" texture */
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.075'/%3E%3C/svg%3E"),
-    /* scattered foxing / age spots — a mix of soft and more defined stains */
-    radial-gradient(circle at 17% 24%, var(--foxing) 0%, transparent 6%),
-    radial-gradient(circle at 83% 19%, var(--foxing-deep) 0%, transparent 4%),
-    radial-gradient(circle at 27% 77%, var(--foxing) 0%, transparent 7%),
-    radial-gradient(circle at 75% 83%, var(--foxing-deep) 0%, transparent 4%),
-    radial-gradient(circle at 62% 44%, var(--foxing) 0%, transparent 4%),
-    radial-gradient(circle at 40% 12%, var(--foxing-deep) 0%, transparent 3%),
-    radial-gradient(circle at 9% 52%, var(--foxing) 0%, transparent 5%),
-    radial-gradient(circle at 91% 61%, var(--foxing-deep) 0%, transparent 3%),
-    radial-gradient(circle at 48% 90%, var(--foxing) 0%, transparent 5%),
-    radial-gradient(circle at 34% 40%, var(--foxing-deep) 0%, transparent 2%),
-    radial-gradient(circle at 66% 68%, var(--foxing-deep) 0%, transparent 2%),
-    /* soft worn, darkened edges (age vignette) */
-    radial-gradient(ellipse 116% 116% at 50% 48%,
-      transparent 46%, var(--ink-edge) 100%),
-    /* warm cream page wash — brighter in the middle where light falls */
-    radial-gradient(ellipse 90% 90% at 50% 46%,
-      var(--paper-light) 0%, var(--paper) 58%, var(--paper-shade) 100%);
+    radial-gradient(ellipse 100% 100% at 50% 50%,
+      var(--desk) 0%, var(--desk-edge) 100%);
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-/* Minimal design: a faint double ruled border framing the page, like an old
-   book plate. Purely decorative and click-through. */
+/* The torn book page: a warm cream sheet with a fine paper grain and a soft
+   worn-edge shading. The filter frays its edges (ripped/tattered) and drops a
+   shadow so it reads as a torn sheet lying on the surface. Click-through. */
 .stage::before {
   content: "";
   position: absolute;
-  inset: 26px;
+  inset: 34px;
   z-index: 0;
   pointer-events: none;
-  box-shadow:
-    inset 0 0 0 1px var(--page-rule),   /* outer rule                    */
-    inset 0 0 0 4px transparent,        /* the gap between the two rules */
-    inset 0 0 0 5px var(--page-rule);   /* inner rule                    */
+  background-color: var(--paper);
+  background-image:
+    /* paper grain / fibre texture */
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.07'/%3E%3C/svg%3E"),
+    /* soft worn, darkened edges */
+    radial-gradient(ellipse 118% 118% at 50% 48%,
+      transparent 62%, var(--ink-edge) 100%),
+    /* warm cream page wash — brighter in the middle where light falls */
+    radial-gradient(ellipse 92% 92% at 50% 46%,
+      var(--paper-light) 0%, var(--paper) 60%, var(--paper-shade) 100%);
+  filter: url(#torn-edge) drop-shadow(0 5px 12px rgba(0, 0, 0, 0.5));
 }
 
 /* ===========================================================================
