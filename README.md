@@ -2,8 +2,9 @@
 
 Apollo is your personal AI assistant — a calm white-and-gold app with a glowing
 golden compass at its heart. You type (or speak) to it, and Apollo replies **out
-loud and in writing**. It remembers your past conversations, and it's built so new
-abilities (Gmail, Printify, n8n, and more) can be added later by dropping in a file.
+loud and in writing**. It remembers your past conversations, it can already act on
+your behalf through **live integrations** (Spotify, email, GitHub, web search), and
+it's built so new abilities can be added later by dropping in a file.
 
 ---
 
@@ -124,12 +125,28 @@ Open **`prompts/apollo_system.txt`**. The `PERSONA` section controls how Apollo 
 
 ---
 
-## 7. Add new abilities later (integrations)
+## 7. Integrations (what Apollo can already do)
 
-Apollo is built so new integrations are easy. See **`backend/routers/README.md`** —
-in short, you copy `example_router.py`, then ask Claude Code to wire it in. Any new
-API key goes in `.env` (never in code). **No integrations are built yet** — v1 is
-pure chat + voice.
+Apollo doesn't just chat — Claude can decide, on its own, to use real tools during a
+conversation. These are **live** today:
+
+- **Spotify** — play a song, artist, one of your own playlists, or a genre; queue a
+  track; and pause/resume/skip/say what's playing.
+- **Email (iCloud)** — read your most recent inbox mail (or unread only) and search it
+  by keyword, sender, or topic, so Apollo can summarize and flag what matters.
+- **GitHub** — list and search your repos, create a new repo, and look inside a repo
+  (list its files, read a file).
+- **Web** — live web search and page-reading (run server-side by Anthropic).
+- **Memory & workflows** — Apollo can save durable facts about you and named workflows
+  to its permanent knowledge base.
+
+Each capability is a small self-contained file in `backend/routers/`, registered as a
+Claude tool in `backend/claude_client.py`. Every integration reads its credentials
+from `.env` (see `.env.example`) — **no secrets ever live in code or on GitHub**.
+
+Want to add another (Printify, n8n, Make.com, your Obsidian vault, …)? See
+**`backend/routers/README.md`**: copy `example_router.py`, then ask Claude Code to wire
+it in, and put any new API key in `.env`.
 
 ---
 

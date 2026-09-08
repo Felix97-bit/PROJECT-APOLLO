@@ -6,6 +6,14 @@ n8n, Make.com, market data, GitHub, your Obsidian vault — anything with an API
 The whole design goal here is simple: **adding a new capability = one new file + one
 Claude Code session.** You don't have to redesign Apollo each time.
 
+**Already built and live** (registered as Claude tools in `backend/claude_client.py`):
+
+- `spotify_router.py` — play / queue / control playback.
+- `email_router.py` — read and search the iCloud inbox.
+- `github_router.py` — list / search / create repos and read repo files.
+
+`example_router.py` is the template for adding the next one.
+
 ---
 
 ## To add a new integration to Apollo
@@ -31,14 +39,18 @@ Claude Code session.** You don't have to redesign Apollo each time.
 In `backend/claude_client.py` there is a clearly marked spot:
 
 ```python
-# --- TODO: tool/router registration plugs in here ---
+# --- TOOL / ROUTER REGISTRATION ---
 ```
 
-That's where a future version of Apollo will hand your routers to Claude as
-**tools** (using Claude "tool use" / function-calling), so Apollo can actually
-decide to call them during a conversation. **That part is intentionally not built
-in v1** — v1 is pure chat + voice. The routers folder just keeps the door open so
-adding it later is clean.
+That's where Apollo hands your routers to Claude as **tools** (using Claude "tool
+use" / function-calling), so Apollo can decide on its own to call them during a
+conversation. To wire in a new router you do two things there:
+
+1. Add a **tool definition** (name, description, input schema) in `_tools()`.
+2. Add a matching branch in `_execute_tool()` that calls your router function.
+
+The agentic loop already handles the rest: Claude asks for a tool, Apollo runs it,
+feeds the result back, and Claude replies in words.
 
 ---
 
